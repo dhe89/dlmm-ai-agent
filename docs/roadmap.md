@@ -50,6 +50,7 @@
 - [x] Compare the SMA proxy against a passive buy-and-hold pair-price benchmark, including excess return.
 - [x] Add a fail-closed JSONL historical snapshot loader and reproducible CLI report.
 - [x] Add a bounded, deterministic SMA parameter sweep ranked by excess return and drawdown.
+- [x] Add chronological train/holdout validation that selects parameters on earlier data and evaluates them on a later segment without parameter-selection leakage.
 - [ ] Compare multiple active strategies and record reproducible experiments.
 - Gate: repeatable reports, no hidden look-ahead bias, and risk metrics alongside returns.
 
