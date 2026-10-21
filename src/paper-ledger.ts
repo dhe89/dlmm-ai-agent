@@ -170,6 +170,58 @@ export class PaperLedger {
     };
   }
 
+  /**
+   * Rebuild a ledger from its durable event journal. Each event is checked
+   * against the state produced by earlier events; replay fails closed on
+   * impossible transitions or inconsistent recorded values.
+   */
+  static replay(initialCapitalUsd: number, events: readonly PaperLedgerEvent[]): PaperLedger {
+    const ledger = new PaperLedger(initialCapitalUsd);
+
+    for (const event of events) {
+      if (!event || typeof event !== "object") {
+        throw new Error("Invalid paper ledger event during replay");
+      }
+
+      if (event.type === "position_opened") {
+        ledger.openPosition({
+          id: event.positionId,
+          poolAddress: event.poolAddress,
+          openedAt: event.at,
+          initialCapitalUsd: event.capitalUsd,
+          entryPoolPrice: event.entryPoolPrice
+        });
+        continue;
+      }
+
+      const position = ledger.getPosition(event.positionId);
+      if (!position || position.status !== "open") {
+        throw new Error(`Cannot replay ${event.type}: position ${event.positionId} is not open`);
+      }
+
+      if (event.type === "position_marked") {
+        if (Math.abs(position.currentValueUsd - event.previousValueUsd) > 0.000001) {
+          throw new Error(`Cannot replay mark for ${event.positionId}: previous value does not match`);
+        }
+        ledger.markPosition(event.positionId, event.at, event.currentValueUsd);
+        continue;
+      }
+
+      if (event.type === "position_closed") {
+        const expectedPnl = ledger.roundMoney(event.finalValueUsd - position.initialCapitalUsd);
+        if (Math.abs(expectedPnl - event.realizedPnlUsd) > 0.000001) {
+          throw new Error(`Cannot replay close for ${event.positionId}: realized PnL does not match`);
+        }
+        ledger.closePosition(event.positionId, event.at, event.finalValueUsd);
+        continue;
+      }
+
+      throw new Error("Unsupported paper ledger event during replay");
+    }
+
+    return ledger;
+  }
+
   static restore(state: PaperLedgerState): PaperLedger {
     if (!state || state.schemaVersion !== 1) {
       throw new Error("Unsupported or invalid paper ledger state schema");
