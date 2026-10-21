@@ -1,4 +1,4 @@
-import DLMM from "@meteora-ag/dlmm";
+import { DLMM } from "@meteora-ag/dlmm";
 import { Connection, PublicKey } from "@solana/web3.js";
 
 const DEFAULT_RPC_URL = "https://api.mainnet-beta.solana.com";
@@ -64,7 +64,7 @@ export async function collectActiveBinSnapshot(
   const binWindow = await pool.getBinsAroundActiveBin(binsEachSide, binsEachSide);
 
   const activeBinId = numericId(activeBin.binId, "active bin ID");
-  const bins = binWindow.bins.map((bin) => {
+  const bins: BinLiquiditySnapshot[] = (binWindow.bins as unknown as unknown[]).map((bin: unknown) => {
     const row = bin as unknown as Record<string, unknown>;
     const amountX = row.amountX ?? row.xAmount;
     const amountY = row.amountY ?? row.yAmount;
@@ -78,9 +78,9 @@ export async function collectActiveBinSnapshot(
         ? { liquiditySupply: numericString(liquidity, "bin liquidity supply") }
         : {})
     };
-  }).sort((a, b) => a.binId - b.binId);
+  }).sort((a: BinLiquiditySnapshot, b: BinLiquiditySnapshot) => a.binId - b.binId);
 
-  if (!bins.some((bin) => bin.binId === activeBinId)) {
+  if (!bins.some((bin: BinLiquiditySnapshot) => bin.binId === activeBinId)) {
     throw new Error("Meteora bin window did not include the active bin");
   }
 
