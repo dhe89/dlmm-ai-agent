@@ -12,8 +12,8 @@ export interface MeteoraPoolCollectorOptions {
 export interface MeteoraPoolSummary {
   address: string;
   name?: string;
-  priceUsd?: number;
-  activeBinId?: number;
+  /** Pool pair price from the Data API; not assumed to be USD-denominated. */
+  currentPrice?: number;
   volume24hUsd?: number;
   tvlUsd?: number;
 }
@@ -48,23 +48,21 @@ function nestedNumber(record: Record<string, unknown>, parentKey: string, keys: 
   return parent ? pickNumber(parent, keys) : undefined;
 }
 
+/** Normalize documented Meteora DLMM Data API pool fields without inventing values. */
 export function normalizePool(value: unknown): MeteoraPoolSummary | undefined {
   const row = asRecord(value);
   if (!row || typeof row.address !== "string" || row.address.trim() === "") return undefined;
 
   const volume24hUsd =
-    nestedNumber(row, "volume", ["24h", "24H", "day"]) ??
+    nestedNumber(row, "volume", ["24h", "24H"]) ??
     pickNumber(row, ["volume_24h", "volume24hUsd"]);
   const tvlUsd = pickNumber(row, ["tvl", "tvlUsd"]);
-  const priceUsd = pickNumber(row, ["price", "price_usd", "priceUsd", "current_price"]);
-  const activeBinId = pickNumber(row, ["active_bin_id", "activeBinId"]) ??
-    nestedNumber(row, "active_bin", ["bin_id", "id"]);
+  const currentPrice = pickNumber(row, ["current_price", "currentPrice"]);
 
   return {
     address: row.address,
     ...(typeof row.name === "string" ? { name: row.name } : {}),
-    ...(priceUsd !== undefined ? { priceUsd } : {}),
-    ...(activeBinId !== undefined ? { activeBinId } : {}),
+    ...(currentPrice !== undefined ? { currentPrice } : {}),
     ...(volume24hUsd !== undefined ? { volume24hUsd } : {}),
     ...(tvlUsd !== undefined ? { tvlUsd } : {})
   };
@@ -84,6 +82,9 @@ export class MeteoraPoolCollector {
   async collectPools(pageSize = 20): Promise<CollectionResult> {
     if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) {
       throw new Error("pageSize must be an integer between 1 and 1000");
+    }
+    if (!Number.isFinite(this.timeoutMs) || this.timeoutMs <= 0) {
+      throw new Error("timeoutMs must be a positive finite number");
     }
 
     const url = new URL(`${this.baseUrl}/pools`);
@@ -113,7 +114,13 @@ export class MeteoraPoolCollector {
       throw new Error(`Meteora API returned HTTP ${response.status}`);
     }
 
-    const payload: unknown = await response.json();
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error("Meteora API returned invalid JSON");
+    }
+
     const root = asRecord(payload);
     if (!root || !Array.isArray(root.data)) {
       throw new Error("Unexpected Meteora API response: expected a data array");
@@ -135,20 +142,21 @@ export class MeteoraPoolCollector {
   }
 }
 
-// A deliberately conservative conversion: only produce snapshots when both price
-// and active-bin data exist. Missing values must not be fabricated.
+/**
+ * Build a snapshot only when the official pool pair price is available.
+ * The pool-list response does not expose active-bin ID, so it is not fabricated.
+ */
 export function toMarketSnapshot(
   pool: MeteoraPoolSummary,
   capturedAt: string
 ): MarketSnapshot | undefined {
-  if (pool.priceUsd === undefined || pool.activeBinId === undefined) return undefined;
+  if (pool.currentPrice === undefined || !Number.isFinite(pool.currentPrice)) return undefined;
   if (!Number.isFinite(Date.parse(capturedAt))) return undefined;
 
   return {
     poolAddress: pool.address,
     capturedAt,
-    priceUsd: pool.priceUsd,
-    activeBinId: pool.activeBinId,
+    currentPrice: pool.currentPrice,
     ...(pool.volume24hUsd !== undefined ? { volume24hUsd: pool.volume24hUsd } : {}),
     ...(pool.tvlUsd !== undefined ? { tvlUsd: pool.tvlUsd } : {})
   };
