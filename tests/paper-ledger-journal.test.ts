@@ -46,6 +46,46 @@ describe("PaperLedgerEventJournal", () => {
     expect(raw.trimEnd().split("\n")).toHaveLength(2);
   });
 
+  it("replays journal events into an equivalent ledger after restart", async () => {
+    const journal = await createJournal();
+    const original = new PaperLedger(1_000);
+    original.openPosition({
+      id: "pos-1",
+      poolAddress: "pool-A",
+      openedAt: "2026-10-21T10:00:00.000Z",
+      initialCapitalUsd: 250,
+      entryPoolPrice: 1.25
+    });
+    original.markPosition("pos-1", "2026-10-21T11:00:00.000Z", 275);
+    original.closePosition("pos-1", "2026-10-21T12:00:00.000Z", 270);
+    await journal.append(original.getEvents());
+
+    const replayed = PaperLedger.replay(1_000, await journal.readAll());
+    expect(replayed.summary()).toEqual(original.summary());
+    expect(replayed.getPositions()).toEqual(original.getPositions());
+    expect(replayed.getEvents()).toEqual(original.getEvents());
+  });
+
+  it("rejects inconsistent event history during replay", () => {
+    expect(() => PaperLedger.replay(1_000, [
+      {
+        type: "position_opened",
+        at: "2026-10-21T10:00:00.000Z",
+        positionId: "pos-1",
+        poolAddress: "pool-A",
+        capitalUsd: 250,
+        entryPoolPrice: 1.25
+      },
+      {
+        type: "position_marked",
+        at: "2026-10-21T11:00:00.000Z",
+        positionId: "pos-1",
+        previousValueUsd: 999,
+        currentValueUsd: 275
+      }
+    ])).toThrow(/previous value does not match/);
+  });
+
   it("fails closed on malformed records and incomplete final writes", async () => {
     const journal = await createJournal();
     await writeFile(journal.filePath, '{"type":"unknown"}\n', "utf8");
