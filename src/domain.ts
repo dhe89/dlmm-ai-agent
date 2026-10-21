@@ -1,10 +1,14 @@
 export type TradingMode = "paper";
 
+/**
+ * Snapshot from the Meteora indexed Data API.
+ * currentPrice is the pool's pair price as returned by Meteora; it is NOT
+ * assumed to be USD-denominated. Active-bin data must be sourced separately.
+ */
 export interface MarketSnapshot {
   poolAddress: string;
   capturedAt: string;
-  priceUsd: number;
-  activeBinId: number;
+  currentPrice: number;
   volume24hUsd?: number;
   tvlUsd?: number;
 }
@@ -14,7 +18,7 @@ export interface PaperPosition {
   poolAddress: string;
   openedAt: string;
   initialCapitalUsd: number;
-  entryPriceUsd: number;
+  entryPoolPrice: number;
   status: "open" | "closed";
 }
 
