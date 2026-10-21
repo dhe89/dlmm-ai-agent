@@ -26,8 +26,8 @@ export function markLedgerFromValuation(
   if (!Number.isFinite(Date.parse(valuation.capturedAt))) {
     throw new Error("Cannot mark paper position: capturedAt is invalid");
   }
-  if (valuation.ageMs !== undefined && (!Number.isFinite(valuation.ageMs) || valuation.ageMs < 0 || valuation.ageMs > 60_000)) {
-    throw new Error("Cannot mark paper position: valuation age exceeds the 60-second safety limit");
+  if (valuation.ageMs === undefined || !Number.isFinite(valuation.ageMs) || valuation.ageMs < 0 || valuation.ageMs > 60_000) {
+    throw new Error("Cannot mark paper position: valuation age is missing, invalid, or exceeds the 60-second safety limit");
   }
   if (
     valuation.inventoryValueUsd === undefined ||
