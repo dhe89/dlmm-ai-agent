@@ -55,7 +55,6 @@ export function screenPoolCandidates(
     });
     const address = snapshot.poolAddress.trim();
     if (seen.has(address)) continue;
-    seen.add(address);
 
     if (snapshot.tvlUsd === undefined || snapshot.volume24hUsd === undefined) continue;
     if (snapshot.tvlUsd < config.minTvlUsd || snapshot.volume24hUsd < config.minVolume24hUsd) continue;
@@ -63,6 +62,7 @@ export function screenPoolCandidates(
 
     const volumeToTvlRatio = snapshot.volume24hUsd / snapshot.tvlUsd;
     if (!Number.isFinite(volumeToTvlRatio)) continue;
+    seen.add(address);
     eligible.push({
       poolAddress: address,
       capturedAt: snapshot.capturedAt,
