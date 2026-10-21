@@ -1,0 +1,17 @@
+{
+  "name": "dlmm-ai-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Meteora DLMM live-data paper trading research agent",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}
