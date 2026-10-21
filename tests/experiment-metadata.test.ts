@@ -23,6 +23,23 @@ describe("buildExperimentMetadata", () => {
     expect(first.dataQuality.maxIntervalSeconds).toBe(7200);
   });
 
+  it("warns when historical snapshot intervals are highly irregular", () => {
+    const snapshots = [0, 60, 120, 900].map((seconds, index) => ({
+      poolAddress: "pool-A",
+      capturedAt: new Date(Date.UTC(2026, 0, 1) + seconds * 1000).toISOString(),
+      currentPrice: index + 1
+    }));
+    const result = buildExperimentMetadata("irregular", snapshots);
+    expect(result.dataQuality.intervalDispersionRatio).toBeGreaterThan(3);
+    expect(result.dataQuality.samplingWarnings.some(warning => warning.includes("largest snapshot gap"))).toBe(true);
+  });
+
+  it("warns when interval quality cannot be assessed from one snapshot", () => {
+    const result = buildExperimentMetadata("single", [series()[0]!]);
+    expect(result.dataQuality.intervalDispersionRatio).toBeNull();
+    expect(result.dataQuality.samplingWarnings).toContain("only one observation; interval regularity cannot be assessed");
+  });
+
   it("rejects mixed pools, duplicate timestamps and invalid prices", () => {
     expect(() => buildExperimentMetadata("x", [
       ...series().slice(0, 1),
