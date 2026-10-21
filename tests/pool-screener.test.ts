@@ -45,6 +45,16 @@ describe("screenPoolCandidates", () => {
     expect(result[0]?.tvlUsd).toBe(200_000);
   });
 
+  it("does not let an ineligible duplicate suppress a later eligible pool", () => {
+    const result = screenPoolCandidates([
+      snapshot({ poolAddress: "pool-a" }),
+      snapshot({ poolAddress: "pool-a", tvlUsd: 200_000, volume24hUsd: 100_000 })
+    ], config, { now });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.poolAddress).toBe("pool-a");
+  });
+
   it("rejects stale snapshots and invalid screener configuration", () => {
     expect(() => screenPoolCandidates([
       snapshot({
