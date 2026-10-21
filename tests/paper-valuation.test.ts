@@ -69,6 +69,9 @@ describe("markLedgerFromValuation", () => {
     expect(() => markLedgerFromValuation(
       ledger, "pos-1", valuation({ feesUsd: undefined })
     )).toThrow(/incomplete/);
+    expect(() => markLedgerFromValuation(
+      ledger, "pos-1", valuation({ ageMs: undefined })
+    )).toThrow(/valuation age/);
     expect(ledger.summary().equityUsd).toBe(200);
   });
 
