@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseHistoricalSnapshots } from "./historical-backtest.js";
 import { runSmaWalkForward } from "./walk-forward.js";
+import { buildExperimentMetadata } from "./experiment-metadata.js";
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -26,7 +27,9 @@ function windowsOption(name: string, fallback: number[]): number[] {
 async function main(): Promise<void> {
   const input = option("input");
   if (!input) throw new Error("required option: --input=path/to/snapshots.jsonl");
-  const snapshots = parseHistoricalSnapshots(await readFile(resolve(input), "utf8"));
+  const rawInput = await readFile(resolve(input), "utf8");
+  const snapshots = parseHistoricalSnapshots(rawInput);
+  const metadata = buildExperimentMetadata(rawInput, snapshots);
   const config = {
     fastWindows: windowsOption("fast-windows", [3, 5, 8]),
     slowWindows: windowsOption("slow-windows", [10, 15, 20]),
@@ -39,6 +42,7 @@ async function main(): Promise<void> {
   console.log(JSON.stringify({
     reportType: "historical-sma-walk-forward",
     input: resolve(input),
+    metadata,
     config,
     result
   }, null, 2));
