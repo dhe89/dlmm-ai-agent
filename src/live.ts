@@ -2,6 +2,7 @@ import { appendFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { MeteoraPoolCollector, toMarketSnapshot } from "./collectors/meteora.js";
 import { collectActiveBinSnapshot } from "./collectors/meteora-chain.js";
+import { screenPoolCandidates } from "./pool-screener.js";
 
 function parsePositiveInteger(value: string | undefined, fallback: number, name: string): number {
   if (value === undefined) return fallback;
@@ -9,6 +10,13 @@ function parsePositiveInteger(value: string | undefined, fallback: number, name:
   if (!Number.isInteger(parsed) || parsed < 1) {
     throw new Error(`${name} must be a positive integer`);
   }
+  return parsed;
+}
+
+function parseNonNegativeNumber(value: string | undefined, fallback: number, name: string): number {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) throw new Error(`${name} must be a finite non-negative number`);
   return parsed;
 }
 
@@ -72,6 +80,31 @@ async function main(): Promise<void> {
 
   if (snapshots.length === 0) {
     throw new Error("Meteora returned pools but none had a usable current_price; no snapshots written");
+  }
+
+  const screening = option("screen") === "true"
+    ? screenPoolCandidates(snapshots, {
+        minTvlUsd: parseNonNegativeNumber(option("min-tvl-usd"), 100_000, "min-tvl-usd"),
+        minVolume24hUsd: parseNonNegativeNumber(option("min-volume-24h-usd"), 25_000, "min-volume-24h-usd"),
+        maxCandidates: parsePositiveInteger(option("max-candidates"), 10, "max-candidates"),
+        maxSnapshotAgeMs: parseNonNegativeNumber(option("max-snapshot-age-ms"), 60_000, "max-snapshot-age-ms")
+      }, { now: result.retrievedAt })
+    : undefined;
+
+  if (screening) {
+    console.log(JSON.stringify({
+      screening: {
+        mode: "discovery-only",
+        warning: "Candidates are not buy/sell signals; no transactions are executed.",
+        criteria: {
+          minTvlUsd: parseNonNegativeNumber(option("min-tvl-usd"), 100_000, "min-tvl-usd"),
+          minVolume24hUsd: parseNonNegativeNumber(option("min-volume-24h-usd"), 25_000, "min-volume-24h-usd"),
+          maxCandidates: parsePositiveInteger(option("max-candidates"), 10, "max-candidates"),
+          maxSnapshotAgeMs: parseNonNegativeNumber(option("max-snapshot-age-ms"), 60_000, "max-snapshot-age-ms")
+        },
+        candidates: screening
+      }
+    }, null, 2));
   }
 
   const records = snapshots.map((snapshot) => JSON.stringify({
