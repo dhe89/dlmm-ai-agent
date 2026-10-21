@@ -44,7 +44,7 @@ jobs:
       - name: Verify live Meteora API and snapshot schema
         run: |
           for attempt in 1 2 3; do
-            node dist/live.js --limit=3 --output=/tmp/meteora-snapshots.jsonl && exit 0
+            node dist/live.js --limit=3 --details=true --output=/tmp/meteora-snapshots.jsonl && exit 0
             echo "Live Meteora check failed (attempt $attempt/3)"
             sleep $((attempt * 5))
           done
