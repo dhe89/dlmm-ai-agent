@@ -13,8 +13,10 @@
 - [x] Add a read-only collector for the official Meteora DLMM Data API `/pools` endpoint.
 - [x] Align pool-list normalization with the published API schema.
 - [x] Add mocked unit tests for normalization, invalid responses, and HTTP errors.
-- [ ] Verify live endpoint behavior from the CI/cloud runtime.
-- [ ] Add bounded retry/backoff, rate-limit handling, persistence, and stale-data checks.
+- [ ] Verify live endpoint behavior from the CI/cloud runtime (live smoke test added; awaiting a green run).
+- [x] Add append-only local JSONL snapshot persistence with source and retrieval timestamp.
+- [ ] Add bounded retry/backoff and rate-limit handling inside the collector.
+- [ ] Add stale-data checks before any strategy consumes snapshots.
 - [ ] Identify an authoritative source for active-bin IDs and bin-level liquidity/position state.
 - Gate: real response samples are validated and saved with source and retrieval time; no transaction signing code.
 
