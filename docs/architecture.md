@@ -3,12 +3,18 @@
 ## Data flow
 
 1. **Data collector** obtains public pool/market data from supported Meteora/Solana endpoints.
-2. **Data validation** checks timestamps, required fields, and staleness before any downstream use.
+2. **Data validation** rejects stale/future snapshots and invalid required numeric fields before strategy use.
 3. **Pool screener** applies deterministic filters and ranks a limited candidate set.
 4. **Strategy engine** proposes a virtual position and its parameters.
 5. **Paper execution** records virtual entries, exits, and rebalances only; it must not sign or send transactions.
 6. **Position valuation** estimates inventory value, accrued fees, and estimated costs.
 7. **Ledger/reporting** stores decisions and snapshots so results can be audited and compared.
+
+## Market-data guard
+
+`assertFreshMarketSnapshot` fails closed when timestamps are malformed, future-dated, older than the configured age threshold, or when required/optional numeric fields are invalid. The default maximum age is 60 seconds and can be configured by the caller. Pool pair price is still not assumed to be USD-denominated.
+
+The Meteora collector retries network failures, HTTP 429, and HTTP 5xx responses with bounded exponential backoff. Client errors are not retried. Retry-After values are capped to a five-second wait.
 
 ## Paper ledger and recovery
 
