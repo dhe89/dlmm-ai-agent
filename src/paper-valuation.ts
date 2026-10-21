@@ -23,8 +23,15 @@ export function markLedgerFromValuation(
   if (valuation.status !== "available") {
     throw new Error(`Cannot mark paper position from ${valuation.status} valuation`);
   }
+  if (!Number.isFinite(Date.parse(valuation.capturedAt))) {
+    throw new Error("Cannot mark paper position: capturedAt is invalid");
+  }
+  if (valuation.ageMs !== undefined && (!Number.isFinite(valuation.ageMs) || valuation.ageMs < 0 || valuation.ageMs > 60_000)) {
+    throw new Error("Cannot mark paper position: valuation age exceeds the 60-second safety limit");
+  }
   if (
     valuation.inventoryValueUsd === undefined ||
+    valuation.inventoryPnlUsd === undefined ||
     valuation.feesUsd === undefined ||
     valuation.executionCostsUsd === undefined ||
     valuation.networkCostsUsd === undefined ||
@@ -41,6 +48,13 @@ export function markLedgerFromValuation(
   ];
   if (!values.every(Number.isFinite) || values.slice(0, 4).some((value) => value < 0)) {
     throw new Error("Cannot mark paper position: valuation contains invalid amounts");
+  }
+  if (Object.values(valuation.evidence).some((status) => status === "unavailable")) {
+    throw new Error("Cannot mark paper position: valuation evidence is incomplete");
+  }
+  const expectedNetPnl = valuation.inventoryPnlUsd + valuation.feesUsd - valuation.executionCostsUsd - valuation.networkCostsUsd;
+  if (Math.abs(expectedNetPnl - valuation.netPnlUsd) > 0.000001) {
+    throw new Error("Cannot mark paper position: net PnL does not match valuation components");
   }
 
   const markedValueUsd =
