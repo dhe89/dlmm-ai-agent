@@ -54,7 +54,7 @@ This command requires enough observations for the selected slow window. The outp
 
 The bounded parameter sweep compares multiple fast/slow SMA windows on the same input series and ranks results by excess return versus buy-and-hold, then drawdown. It is an in-sample exploratory tool; selecting the best row on the same data used for evaluation can overfit. Reserve a separate, later time period for holdout validation before trusting a parameter choice.
 
-The sweep module is currently available to import from `src/strategy-sweep.ts`; it is not yet exposed as a separate CLI command.
+The sweep module is available to import from `src/strategy-sweep.ts`. For a chronological holdout evaluation, use the CLI below. It chooses SMA windows using only the earlier training segment and evaluates the selected pair on the later holdout segment; the holdout run starts cold, so it requires enough observations for the slow window and includes signal warm-up.\n\n```bash\nnpm run validate:holdout -- --input=data/local/meteora-pools.jsonl --fast-windows=3,5,8 --slow-windows=10,15,20 --train-fraction=0.7 --cost-bps=30 --capital-usd=1000\n```\n\nDefaults are fast windows 3/5/8, slow windows 10/15/20, 70% training data, 30 bps per side, and $1,000 starting notional. The output reports training and holdout periods separately. This is a single holdout check, not rolling walk-forward validation; a single holdout is noisy and does not establish future profitability or DLMM LP PnL.
 
 ## Development
 
