@@ -21,11 +21,31 @@ async function main(): Promise<void> {
   const limit = parsePositiveInteger(option("limit"), 20, "limit");
   if (limit > 1000) throw new Error("limit must not exceed 1000");
 
+  const verifyDetails = option("details") === "true";
   const outputPath = resolve(option("output") ?? "data/local/meteora-pools.jsonl");
   const collector = new MeteoraPoolCollector();
   const result = await collector.collectPools(limit);
   if (result.pools.length === 0) {
     throw new Error("Meteora API returned no valid pools; refusing to write an empty snapshot batch");
+  }
+
+  let detailCheck: { poolAddress: string; topLevelKeys: string[]; dataKeys?: string[] } | undefined;
+  if (verifyDetails) {
+    const poolAddress = result.pools[0].address;
+    const detail = await collector.collectPoolDetails(poolAddress);
+    const payload = detail.payload;
+    const data = payload.data;
+    const dataRecord = typeof data === "object" && data !== null && !Array.isArray(data)
+      ? data as Record<string, unknown>
+      : undefined;
+    detailCheck = {
+      poolAddress,
+      topLevelKeys: Object.keys(payload).sort(),
+      ...(dataRecord ? { dataKeys: Object.keys(dataRecord).sort() } : {})
+    };
+    if (Object.keys(payload).length === 0) {
+      throw new Error("Meteora pool detail endpoint returned an empty object");
+    }
   }
 
   const capturedAt = result.retrievedAt;
@@ -53,6 +73,7 @@ async function main(): Promise<void> {
     retrievedAt: result.retrievedAt,
     poolsReturned: result.pools.length,
     snapshotsWritten: snapshots.length,
+    ...(detailCheck ? { detailCheck } : {}),
     outputPath
   }, null, 2));
 }
