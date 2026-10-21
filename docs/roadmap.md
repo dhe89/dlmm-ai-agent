@@ -44,6 +44,8 @@
 - [x] Add deterministic pool discovery screening using minimum USD TVL/volume and volume-to-TVL ranking.
 - [x] Reject stale snapshots and exclude pools missing required USD metrics; do not infer pair price as USD.
 - [x] Expose an opt-in read-only CLI screen over freshly collected live pool snapshots.
+- [x] Add a deterministic, cost-aware pair-price SMA shadow backtest with no same-bar look-ahead.
+- [ ] Validate strategies against a sufficiently long historical data set.
 - [ ] Run strategies on live data without execution.
 - [ ] Compare strategies and record experiments.
 - Gate: repeatable reports, no hidden look-ahead bias, and risk metrics alongside returns.
