@@ -6,26 +6,32 @@ import {
 } from "../src/collectors/meteora.js";
 
 describe("normalizePool", () => {
-  it("normalizes known pool fields without inventing missing values", () => {
+  it("normalizes the documented Meteora DLMM Data API fields", () => {
     expect(normalizePool({
       address: "Pool111",
       name: "SOL-TEST",
-      price: 12.5,
-      active_bin_id: 42,
-      volume_24h: 9000,
+      current_price: 12.5,
+      volume: { "24h": 9000, "1h": 1000 },
       tvl: 120000
     })).toEqual({
       address: "Pool111",
       name: "SOL-TEST",
-      priceUsd: 12.5,
-      activeBinId: 42,
+      currentPrice: 12.5,
       volume24hUsd: 9000,
       tvlUsd: 120000
     });
   });
 
+  it("does not treat a token price or undocumented active-bin field as pool data", () => {
+    expect(normalizePool({
+      address: "Pool111",
+      token_x: { price: 4 },
+      active_bin_id: 42
+    })).toEqual({ address: "Pool111" });
+  });
+
   it("rejects rows without a pool address", () => {
-    expect(normalizePool({ price: 1 })).toBeUndefined();
+    expect(normalizePool({ current_price: 1 })).toBeUndefined();
     expect(normalizePool(null)).toBeUndefined();
   });
 
@@ -38,7 +44,17 @@ describe("MeteoraPoolCollector", () => {
   it("requests pools and returns retrieval metadata", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({
-        data: [{ address: "Pool111", price: 2, active_bin_id: 7 }]
+        total: 1,
+        pages: 1,
+        current_page: 1,
+        page_size: 10,
+        data: [{
+          address: "Pool111",
+          name: "SOL-TEST",
+          current_price: 2,
+          volume: { "24h": 900 },
+          tvl: 5000
+        }]
       }), { status: 200, headers: { "content-type": "application/json" } })
     );
     const collector = new MeteoraPoolCollector({
@@ -49,11 +65,17 @@ describe("MeteoraPoolCollector", () => {
     const result = await collector.collectPools(10);
 
     expect(fetchImpl).toHaveBeenCalledOnce();
-    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("/pools?");
+    const requestedUrl = new URL(String(fetchImpl.mock.calls[0]?.[0]));
+    expect(requestedUrl.pathname).toBe("/pools");
+    expect(requestedUrl.searchParams.get("page")).toBe("1");
+    expect(requestedUrl.searchParams.get("page_size")).toBe("10");
+    expect(requestedUrl.searchParams.get("sort_by")).toBe("volume_24h:desc");
     expect(result.pools).toEqual([{
       address: "Pool111",
-      priceUsd: 2,
-      activeBinId: 7
+      name: "SOL-TEST",
+      currentPrice: 2,
+      volume24hUsd: 900,
+      tvlUsd: 5000
     }]);
     expect(Number.isFinite(Date.parse(result.retrievedAt))).toBe(true);
   });
@@ -61,6 +83,14 @@ describe("MeteoraPoolCollector", () => {
   it("rejects invalid page sizes", async () => {
     const collector = new MeteoraPoolCollector({ fetchImpl: vi.fn<typeof fetch>() });
     await expect(collector.collectPools(0)).rejects.toThrow(/pageSize/);
+  });
+
+  it("rejects invalid timeout configuration", async () => {
+    const collector = new MeteoraPoolCollector({
+      timeoutMs: 0,
+      fetchImpl: vi.fn<typeof fetch>()
+    });
+    await expect(collector.collectPools()).rejects.toThrow(/timeoutMs/);
   });
 
   it("rejects HTTP errors", async () => {
@@ -80,24 +110,33 @@ describe("MeteoraPoolCollector", () => {
     });
     await expect(collector.collectPools()).rejects.toThrow(/expected a data array/);
   });
+
+  it("rejects invalid JSON", async () => {
+    const collector = new MeteoraPoolCollector({
+      baseUrl: "https://example.test",
+      fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(
+        new Response("not-json", { status: 200 })
+      )
+    });
+    await expect(collector.collectPools()).rejects.toThrow(/invalid JSON/);
+  });
 });
 
 describe("toMarketSnapshot", () => {
-  it("requires price, active bin, and a valid timestamp", () => {
+  it("requires a documented pool price and a valid timestamp", () => {
     expect(toMarketSnapshot({ address: "Pool111" }, new Date().toISOString())).toBeUndefined();
     expect(toMarketSnapshot({
-      address: "Pool111", priceUsd: 3, activeBinId: 99
+      address: "Pool111", currentPrice: 3
     }, "not-a-date")).toBeUndefined();
   });
 
-  it("creates a snapshot when required fields are present", () => {
+  it("creates a snapshot without fabricating an active bin or USD price", () => {
     expect(toMarketSnapshot({
-      address: "Pool111", priceUsd: 3, activeBinId: 99, tvlUsd: 500
+      address: "Pool111", currentPrice: 3, tvlUsd: 500
     }, "2026-10-21T12:00:00.000Z")).toEqual({
       poolAddress: "Pool111",
       capturedAt: "2026-10-21T12:00:00.000Z",
-      priceUsd: 3,
-      activeBinId: 99,
+      currentPrice: 3,
       tvlUsd: 500
     });
   });
