@@ -49,6 +49,14 @@ export interface PaperLedgerSummary {
   closedPositions: number;
 }
 
+export interface PaperLedgerState {
+  schemaVersion: 1;
+  startingCapitalUsd: number;
+  cashBalanceUsd: number;
+  positions: PaperLedgerPosition[];
+  events: PaperLedgerEvent[];
+}
+
 /**
  * Deterministic in-memory paper ledger. It never signs or submits transactions.
  * Mark values are supplied by a valuation component; this class does not claim
@@ -150,6 +158,64 @@ export class PaperLedger {
       realizedPnlUsd
     });
     return { ...position };
+  }
+
+  exportState(): PaperLedgerState {
+    return {
+      schemaVersion: 1,
+      startingCapitalUsd: this.startingCapitalUsd,
+      cashBalanceUsd: this.cashBalanceUsd,
+      positions: this.getPositions(),
+      events: this.getEvents()
+    };
+  }
+
+  static restore(state: PaperLedgerState): PaperLedger {
+    if (!state || state.schemaVersion !== 1) {
+      throw new Error("Unsupported or invalid paper ledger state schema");
+    }
+    const ledger = new PaperLedger(state.startingCapitalUsd);
+    ledger.assertFiniteNonNegative(state.cashBalanceUsd, "cashBalanceUsd");
+
+    for (const position of state.positions) {
+      if (!position || typeof position.id !== "string" || !position.id.trim()) {
+        throw new Error("Invalid position in paper ledger state");
+      }
+      if (ledger.positions.has(position.id)) {
+        throw new Error(`Duplicate position id in paper ledger state: ${position.id}`);
+      }
+      if (position.status !== "open" && position.status !== "closed") {
+        throw new Error(`Invalid status for position ${position.id}`);
+      }
+      ledger.assertTimestamp(position.openedAt, "openedAt");
+      ledger.assertTimestamp(position.lastMarkedAt, "lastMarkedAt");
+      ledger.assertFiniteNonNegative(position.initialCapitalUsd, "initialCapitalUsd");
+      ledger.assertFiniteNonNegative(position.entryPoolPrice, "entryPoolPrice");
+      ledger.assertFiniteNonNegative(position.currentValueUsd, "currentValueUsd");
+      if (!position.poolAddress.trim() || Date.parse(position.lastMarkedAt) < Date.parse(position.openedAt)) {
+        throw new Error(`Invalid timestamps or pool address for position ${position.id}`);
+      }
+      ledger.positions.set(position.id, { ...position });
+    }
+
+    if (!Array.isArray(state.events)) throw new Error("Invalid events in paper ledger state");
+    ledger.events.push(...state.events.map((event) => ({ ...event })));
+    const openValue = [...ledger.positions.values()]
+      .filter((position) => position.status === "open")
+      .reduce((sum, position) => sum + position.currentValueUsd, 0);
+    const calculatedCash = ledger.roundMoney(
+      ledger.startingCapitalUsd -
+      [...ledger.positions.values()].reduce((sum, position) => sum + position.initialCapitalUsd, 0) +
+      [...ledger.positions.values()].filter((position) => position.status === "closed")
+        .reduce((sum, position) => sum + position.currentValueUsd, 0)
+    );
+    if (calculatedCash < -0.000001 || Math.abs(calculatedCash - state.cashBalanceUsd) > 0.000001) {
+      throw new Error("Paper ledger state violates cash accounting invariants");
+    }
+    if (![state.startingCapitalUsd, state.cashBalanceUsd, openValue].every(Number.isFinite)) {
+      throw new Error("Paper ledger state contains non-finite accounting values");
+    }
+    return ledger;
   }
 
   getPosition(positionId: string): PaperLedgerPosition | undefined {
