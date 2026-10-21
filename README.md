@@ -64,6 +64,16 @@ This selects parameters from each fold's preceding history, then tests on the ne
 
 The sweep module is available to import from `src/strategy-sweep.ts`. For a chronological holdout evaluation, use the CLI below. It chooses SMA windows using only the earlier training segment and evaluates the selected pair on the later holdout segment; the holdout run starts cold, so it requires enough observations for the slow window and includes signal warm-up.\n\n```bash\nnpm run validate:holdout -- --input=data/local/meteora-pools.jsonl --fast-windows=3,5,8 --slow-windows=10,15,20 --train-fraction=0.7 --cost-bps=30 --capital-usd=1000\n```\n\nDefaults are fast windows 3/5/8, slow windows 10/15/20, 70% training data, 30 bps per side, and $1,000 starting notional. The output reports training and holdout periods separately. This is a single holdout check; a single holdout is noisy and does not establish future profitability or DLMM LP PnL. For repeated expanding-window validation, use the walk-forward command below.
 
+## Compare SMA and EMA strategies
+
+Run a fixed-parameter comparison on the same historical snapshot file:
+
+```bash
+npm run compare:strategies -- --input=data/local/meteora-pools.jsonl --fast-window=5 --slow-window=20 --cost-bps=30 --capital-usd=1000
+```
+
+The report compares SMA and EMA crossover proxies using the same fast/slow windows, modeled costs, and passive buy-and-hold benchmark. It includes input SHA-256 and snapshot interval quality metadata. This comparison is intentionally fixed-parameter rather than selecting a winner on the full data set; use the separate holdout or walk-forward commands for chronological validation. Both strategies use pair-price returns only, not DLMM LP inventory, accrued fees, bin changes, or position-level execution costs.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
