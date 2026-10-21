@@ -1,6 +1,7 @@
 import { appendFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { MeteoraPoolCollector, toMarketSnapshot } from "./collectors/meteora.js";
+import { collectActiveBinSnapshot } from "./collectors/meteora-chain.js";
 
 function parsePositiveInteger(value: string | undefined, fallback: number, name: string): number {
   if (value === undefined) return fallback;
@@ -22,6 +23,7 @@ async function main(): Promise<void> {
   if (limit > 1000) throw new Error("limit must not exceed 1000");
 
   const verifyDetails = option("details") === "true";
+  const verifyBins = option("bins") === "true";
   const outputPath = resolve(option("output") ?? "data/local/meteora-pools.jsonl");
   const collector = new MeteoraPoolCollector();
   const result = await collector.collectPools(limit);
@@ -30,6 +32,7 @@ async function main(): Promise<void> {
   }
 
   let detailCheck: { poolAddress: string; topLevelKeys: string[]; dataKeys?: string[] } | undefined;
+  let activeBinCheck: { poolAddress: string; activeBinId: number; binStep: number; binsReturned: number } | undefined;
   if (verifyDetails) {
     const firstPool = result.pools[0];
     if (!firstPool) throw new Error("Meteora returned no pool to verify details");
@@ -48,6 +51,18 @@ async function main(): Promise<void> {
     if (Object.keys(payload).length === 0) {
       throw new Error("Meteora pool detail endpoint returned an empty object");
     }
+  }
+
+  if (verifyBins) {
+    const firstPool = result.pools[0];
+    if (!firstPool) throw new Error("Meteora returned no pool to verify active-bin data");
+    const binSnapshot = await collectActiveBinSnapshot(firstPool.address, { binsEachSide: 5 });
+    activeBinCheck = {
+      poolAddress: binSnapshot.poolAddress,
+      activeBinId: binSnapshot.activeBinId,
+      binStep: binSnapshot.binStep,
+      binsReturned: binSnapshot.bins.length
+    };
   }
 
   const capturedAt = result.retrievedAt;
@@ -76,6 +91,7 @@ async function main(): Promise<void> {
     poolsReturned: result.pools.length,
     snapshotsWritten: snapshots.length,
     ...(detailCheck ? { detailCheck } : {}),
+    ...(activeBinCheck ? { activeBinCheck } : {}),
     outputPath
   }, null, 2));
 }
