@@ -80,7 +80,7 @@ export function validateSmaEmaOnHoldout(
     ? "SMA" : holdoutResult.maxDrawdownPct > holdoutEmaResult.maxDrawdownPct ? "EMA" : "tie";
   return {
     methodology: "chronological-train-holdout",
-    warning: "SMA parameters are selected on training data only. SMA and EMA are compared on the untouched holdout with identical window sizes and costs. Both start cold; results are pair-price proxies, not DLMM LP PnL or a guarantee of future performance.",
+    warning: "SMA parameters are selected on training data only. SMA and EMA are compared on the untouched holdout with identical window sizes and costs. Both holdout runs start cold; results are pair-price proxies, not DLMM LP PnL or a guarantee of future performance.",
     trainObservations: training.length,
     holdoutObservations: holdout.length,
     trainStart: training[0]!.capturedAt,
