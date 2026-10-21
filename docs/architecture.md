@@ -26,7 +26,9 @@ The `PaperLedger` is an in-memory accounting component with explicit state expor
 - Realized and unrealized PnL are reported separately.
 - `PaperLedgerStore` saves versioned JSON snapshots using a temporary file and atomic rename, then validates accounting invariants on load.
 - Missing snapshots return no ledger; malformed JSON and inconsistent cash accounting fail closed.
-- The current store is a snapshot mechanism, not yet an append-only event journal. Concurrent writers and crash-safe event replay are not yet supported.
+- `PaperLedgerEventJournal` appends validated events as JSONL and rejects malformed records or an incomplete final record rather than silently replaying a partial history.
+- `PaperLedger.replay` rebuilds the ledger from an event sequence and checks transition order, prior marked value, and realized PnL against the replayed state.
+- Snapshot and journal writes are intended for a single writer; cross-process locking, fsync-level durability guarantees, and automatic snapshot-plus-journal rotation are not implemented.
 
 The valuation supplied to `markPosition` and `closePosition` must be produced by a separately validated valuation model. Until bin-level composition and fee mechanics are available, these values are test inputs or explicitly labeled estimates, not verified DLMM PnL.
 

@@ -26,7 +26,8 @@
 - [x] Test accounting invariants, overspending, duplicate IDs, timestamp order, and closed positions.
 - [x] Add atomic JSON snapshot persistence and state restoration.
 - [x] Test restart recovery, closed-position accounting, missing files, and corrupted snapshots.
-- [ ] Add durable append-only event journal and crash-safe replay.
+- [x] Add durable append-only JSONL event journal with strict validation and incomplete-record detection.
+- [x] Add deterministic replay with checks against prior values, position transitions, and realized PnL.
 - Gate: deterministic tests cover ledger transitions, accounting invariants, and recovery.
 
 ## Milestone 0.5 — Fee and valuation model
