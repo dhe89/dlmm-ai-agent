@@ -55,7 +55,18 @@ export function runSmaWalkForward(
 
   const ordered = snapshots.map(snapshot => ({ ...snapshot }))
     .sort((a, b) => Date.parse(a.capturedAt) - Date.parse(b.capturedAt));
+  const validFastWindows = config.fastWindows.filter(window => Number.isInteger(window) && window >= 1);
+  const eligibleSlowWindows = config.slowWindows.filter(slow =>
+    Number.isInteger(slow) && slow >= 1 && validFastWindows.some(fast => slow > fast)
+  );
+  if (eligibleSlowWindows.length === 0) {
+    throw new Error("no valid SMA parameter combinations for this data window");
+  }
+  const minSlowWindow = Math.min(...eligibleSlowWindows);
   const initialTrainSize = Math.floor(ordered.length * config.initialTrainFraction);
+  if (initialTrainSize < minSlowWindow + 1) {
+    throw new Error("not enough observations in the initial training window for the SMA parameters");
+  }
   const testCount = ordered.length - initialTrainSize;
   if (initialTrainSize < 1 || testCount < config.folds) {
     throw new Error("not enough observations for the requested walk-forward folds");
