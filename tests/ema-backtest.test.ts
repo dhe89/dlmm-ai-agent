@@ -39,7 +39,7 @@ describe("runEmaBacktest", () => {
 
   it("rejects same-timestamp and non-positive price data", () => {
     const snapshots = series([1, 2, 3, 4, 5]);
-    expect(() => runEmaBacktest([snapshots[0]!, { ...snapshots[1]!, capturedAt: snapshots[0]!.capturedAt }], {
+    expect(() => runEmaBacktest([snapshots[0]!, { ...snapshots[1]!, capturedAt: snapshots[0]!.capturedAt }, snapshots[2]!], {
       fastWindow: 1, slowWindow: 2, costBps: 0, initialCapitalUsd: 100
     })).toThrow(/timestamps must be unique/);
     expect(() => runEmaBacktest(snapshots.map((snapshot, index) =>
