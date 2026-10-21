@@ -50,6 +50,12 @@ npm run backtest:historical -- --input=data/local/meteora-pools.jsonl --fast-win
 
 This command requires enough observations for the selected slow window. The output includes strategy return, drawdown, a passive buy-and-hold benchmark, and excess return. The default cost is a configurable illustrative assumption, not a verified Meteora execution cost. Collector snapshots are not automatically historical OHLCV candles: repeated live collection is required to build a time series, and irregular intervals can distort SMA interpretation. The pair-price result is not DLMM LP PnL.
 
+## Compare SMA parameter combinations
+
+The bounded parameter sweep compares multiple fast/slow SMA windows on the same input series and ranks results by excess return versus buy-and-hold, then drawdown. It is an in-sample exploratory tool; selecting the best row on the same data used for evaluation can overfit. Reserve a separate, later time period for holdout validation before trusting a parameter choice.
+
+The sweep module is currently available to import from `src/strategy-sweep.ts`; it is not yet exposed as a separate CLI command.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
