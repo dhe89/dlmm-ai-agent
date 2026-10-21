@@ -53,8 +53,21 @@ export function runSmaWalkForward(
     throw new Error("folds must be an integer of at least 2");
   }
 
+  if (snapshots.length === 0) throw new Error("no snapshots supplied");
   const ordered = snapshots.map(snapshot => ({ ...snapshot }))
     .sort((a, b) => Date.parse(a.capturedAt) - Date.parse(b.capturedAt));
+  const poolAddress = ordered[0]!.poolAddress;
+  let previousTimestamp = Number.NEGATIVE_INFINITY;
+  for (const snapshot of ordered) {
+    const timestamp = Date.parse(snapshot.capturedAt);
+    if (!Number.isFinite(timestamp)) throw new Error("snapshot capturedAt must be valid");
+    if (timestamp <= previousTimestamp) throw new Error("snapshot timestamps must be unique");
+    if (snapshot.poolAddress !== poolAddress) throw new Error("all snapshots must belong to one pool");
+    if (!Number.isFinite(snapshot.currentPrice) || snapshot.currentPrice <= 0) {
+      throw new Error("snapshot currentPrice must be positive and finite");
+    }
+    previousTimestamp = timestamp;
+  }
   const validFastWindows = config.fastWindows.filter(window => Number.isInteger(window) && window >= 1);
   const eligibleSlowWindows = config.slowWindows.filter(slow =>
     Number.isInteger(slow) && slow >= 1 && validFastWindows.some(fast => slow > fast)
@@ -87,6 +100,9 @@ export function runSmaWalkForward(
       initialCapitalUsd: config.initialCapitalUsd
     });
     const selected = sweep[0]!;
+    if (test.length < selected.slowWindow + 1) {
+      throw new Error(`not enough observations in test fold ${index + 1} for selected slowWindow ${selected.slowWindow}`);
+    }
     const testResult = runShadowBacktest(test, {
       fastWindow: selected.fastWindow,
       slowWindow: selected.slowWindow,
