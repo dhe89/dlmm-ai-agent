@@ -47,7 +47,8 @@
 - [x] Add a deterministic, cost-aware pair-price SMA shadow backtest with no same-bar look-ahead.
 - [ ] Validate strategies against a sufficiently long historical data set.
 - [ ] Run strategies on live data without execution.
-- [ ] Compare strategies and record experiments.
+- [x] Compare the SMA proxy against a passive buy-and-hold pair-price benchmark, including excess return.
+- [ ] Compare multiple active strategies and record reproducible experiments.
 - Gate: repeatable reports, no hidden look-ahead bias, and risk metrics alongside returns.
 
 ## Milestone 0.7 — Long-running deployment
