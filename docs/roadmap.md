@@ -21,10 +21,12 @@
 - Gate: real response samples are validated and saved with source and retrieval time; no transaction signing code.
 
 ## Milestone 0.4 — Paper ledger
-- [x] Add deterministic in-memory ledger transitions for opening, marking, and closing virtual positions.
+- [x] Add deterministic ledger transitions for opening, marking, and closing virtual positions.
 - [x] Track cash, open position value, equity, realized PnL, and unrealized PnL separately.
-- [x] Add tests for accounting invariants, overspending, duplicate IDs, timestamp order, and closed positions.
-- [ ] Add durable append-only event persistence and restart/recovery.
+- [x] Test accounting invariants, overspending, duplicate IDs, timestamp order, and closed positions.
+- [x] Add atomic JSON snapshot persistence and state restoration.
+- [x] Test restart recovery, closed-position accounting, missing files, and corrupted snapshots.
+- [ ] Add durable append-only event journal and crash-safe replay.
 - Gate: deterministic tests cover ledger transitions, accounting invariants, and recovery.
 
 ## Milestone 0.5 — Fee and valuation model
