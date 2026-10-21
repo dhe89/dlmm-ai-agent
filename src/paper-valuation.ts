@@ -41,12 +41,16 @@ export function markLedgerFromValuation(
   }
   const values = [
     valuation.inventoryValueUsd,
+    valuation.inventoryPnlUsd,
     valuation.feesUsd,
     valuation.executionCostsUsd,
     valuation.networkCostsUsd,
     valuation.netPnlUsd
   ];
-  if (!values.every(Number.isFinite) || values.slice(0, 4).some((value) => value < 0)) {
+  if (
+    !values.every(Number.isFinite) ||
+    [valuation.inventoryValueUsd, valuation.feesUsd, valuation.executionCostsUsd, valuation.networkCostsUsd].some((value) => value < 0)
+  ) {
     throw new Error("Cannot mark paper position: valuation contains invalid amounts");
   }
   if (Object.values(valuation.evidence).some((status) => status === "unavailable")) {
