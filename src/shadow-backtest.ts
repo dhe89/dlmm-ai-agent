@@ -26,6 +26,10 @@ export interface ShadowBacktestResult {
   initialCapitalUsd: number;
   finalEquityUsd: number;
   totalReturnPct: number;
+  /** Passive pair-price benchmark, marked to market with entry cost only. */
+  buyHoldFinalEquityUsd: number;
+  buyHoldReturnPct: number;
+  excessReturnPct: number;
   maxDrawdownPct: number;
   winRatePct: number;
   costBpsPerSide: number;
@@ -89,6 +93,10 @@ export function runShadowBacktest(
   };
 
   const costRate = config.costBps / 10_000;
+  // Buy-and-hold is marked to market at the last observed price; no forced exit
+  // is modeled, so only the initial entry cost is applied to this benchmark.
+  const buyHoldFinalEquityUsd = config.initialCapitalUsd * (1 - costRate) * (prices.at(-1)! / prices[0]!);
+  const buyHoldReturnPct = (buyHoldFinalEquityUsd / config.initialCapitalUsd - 1) * 100;
   let equity = config.initialCapitalUsd;
   let exposure: 0 | 1 = 0;
   let trades = 0;
@@ -153,6 +161,9 @@ export function runShadowBacktest(
     initialCapitalUsd: config.initialCapitalUsd,
     finalEquityUsd: equity,
     totalReturnPct: (equity / config.initialCapitalUsd - 1) * 100,
+    buyHoldFinalEquityUsd,
+    buyHoldReturnPct,
+    excessReturnPct: (equity / config.initialCapitalUsd - 1) * 100 - buyHoldReturnPct,
     maxDrawdownPct: maxDrawdown * 100,
     winRatePct: completedTrades > 0 ? wins / completedTrades * 100 : 0,
     costBpsPerSide: config.costBps,
