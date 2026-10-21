@@ -40,6 +40,16 @@ npm run collect:live -- --limit=20 --output=data/local/meteora-pools.jsonl
 
 Each successful run appends JSON Lines records containing a schema version, source, retrieval timestamp, pool address, pair price, and any available volume/TVL fields. The default output path is `data/local/meteora-pools.jsonl`, which is ignored by Git. Do not interpret the pool pair price as USD. CI runs a small live API smoke test and writes its sample output to a temporary path rather than committing market data.
 
+## Run a historical shadow backtest
+
+The historical runner reads timestamped JSONL snapshots produced by the read-only collector. It validates every record and fails closed on malformed timestamps, non-positive pair prices, invalid metrics, duplicate timestamps, or mixed pools (the backtest engine enforces the final two constraints).
+
+```bash
+npm run backtest:historical -- --input=data/local/meteora-pools.jsonl --fast-window=5 --slow-window=20 --cost-bps=30 --capital-usd=1000
+```
+
+This command requires enough observations for the selected slow window. The output includes strategy return, drawdown, a passive buy-and-hold benchmark, and excess return. The default cost is a configurable illustrative assumption, not a verified Meteora execution cost. Collector snapshots are not automatically historical OHLCV candles: repeated live collection is required to build a time series, and irregular intervals can distort SMA interpretation. The pair-price result is not DLMM LP PnL.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
