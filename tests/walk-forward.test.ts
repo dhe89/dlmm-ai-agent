@@ -44,6 +44,29 @@ describe("runSmaWalkForward", () => {
       .toThrow(/insufficient observations|not enough observations/);
   });
 
+  it("rejects mixed pools and invalid snapshot data before splitting folds", () => {
+    const config = {
+      fastWindows: [1], slowWindows: [3], costBps: 0,
+      initialCapitalUsd: 100, initialTrainFraction: 0.5, folds: 2
+    };
+    const mixedPools = series(Array.from({ length: 20 }, (_, i) => i + 1)).map((snapshot, i) =>
+      i === 15 ? { ...snapshot, poolAddress: "pool-B" } : snapshot
+    );
+    expect(() => runSmaWalkForward(mixedPools, config)).toThrow(/one pool/);
+    const invalidPrice = series(Array.from({ length: 20 }, (_, i) => i + 1)).map((snapshot, i) =>
+      i === 3 ? { ...snapshot, currentPrice: 0 } : snapshot
+    );
+    expect(() => runSmaWalkForward(invalidPrice, config)).toThrow(/positive and finite/);
+  });
+
+  it("fails clearly when a selected SMA window cannot warm up within a test fold", () => {
+    const snapshots = series(Array.from({ length: 20 }, (_, i) => 10 + i));
+    expect(() => runSmaWalkForward(snapshots, {
+      fastWindows: [2], slowWindows: [5], costBps: 0,
+      initialCapitalUsd: 100, initialTrainFraction: 0.5, folds: 3
+    })).toThrow(/not enough observations in test fold/);
+  });
+
   it("does not use future test data when selecting parameters for earlier folds", () => {
     const snapshots = series(Array.from({ length: 40 }, (_, i) => 10 + Math.sin(i / 2) * 2 + i * 0.15));
     const config = {
