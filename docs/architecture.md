@@ -5,6 +5,7 @@
 1. **Data collector** obtains public pool/market data from supported Meteora/Solana endpoints.
 2. **Data validation** rejects stale/future snapshots and invalid required numeric fields before strategy use.
 3. **Pool screener** applies deterministic minimum USD TVL/volume filters and ranks candidates by 24-hour volume-to-TVL ratio, with deterministic tie-breakers. This is a discovery heuristic, not a profitability signal.
+4. **Shadow backtest** can test a long/cash moving-average rule on a single pool pair-price series, applies signals to the next observation, models configurable per-side costs, and reports return and drawdown. It is a price-series proxy only—not DLMM LP PnL; bin inventory, accrued fees, range changes, and actual execution mechanics are excluded.
 4. **Strategy engine** proposes a virtual position and its parameters.
 5. **Paper execution** records virtual entries, exits, and rebalances only; it must not sign or send transactions.
 6. **Position valuation** estimates inventory value, accrued fees, and estimated costs.
