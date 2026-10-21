@@ -52,6 +52,7 @@
 - [x] Add a bounded, deterministic SMA parameter sweep ranked by excess return and drawdown.
 - [x] Add chronological train/holdout validation that selects parameters on earlier data and evaluates them on a later segment without parameter-selection leakage.
 - [x] Add expanding-window walk-forward validation with per-fold parameter selection and unseen test segments.
+- [x] Record reproducible input fingerprints and snapshot interval quality statistics in walk-forward reports.
 - [ ] Compare multiple active strategies and record reproducible experiments.
 - Gate: repeatable reports, no hidden look-ahead bias, and risk metrics alongside returns.
 
