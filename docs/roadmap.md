@@ -17,7 +17,7 @@
 - [x] Add append-only local JSONL snapshot persistence with source and retrieval timestamp.
 - [x] Add bounded retries with exponential backoff for network failures, HTTP 429, and HTTP 5xx responses.
 - [x] Add fail-closed validation for stale/future snapshots and invalid numeric fields.
-- [ ] Identify an authoritative source for active-bin IDs and bin-level liquidity/position state.
+- [x] Identify an authoritative source for active-bin IDs and bin-level liquidity state via the official Meteora DLMM SDK; position-specific fee state remains a separate input.
 - Gate: real response samples are validated and saved with source and retrieval time; no transaction signing code.
 
 ## Milestone 0.4 — Paper ledger
@@ -31,10 +31,13 @@
 - Gate: deterministic tests cover ledger transitions, accounting invariants, and recovery.
 
 ## Milestone 0.5 — Fee and valuation model
-- Establish authoritative bin-level inputs and document all assumptions.
-- Model fee accrual, inventory valuation, rebalance costs, and net PnL.
-- Distinguish measured, sourced, estimated, and unavailable values.
-- Gate: test fixtures cover in-range, out-of-range, price moves, and missing/stale data.
+- [x] Establish authoritative bin-level inputs and document the remaining position-specific data requirements.
+- [x] Add conservative inventory valuation using decimal-adjusted token quantities and independently sourced USD marks.
+- [x] Keep inventory PnL separate from position-specific fees and execution/network costs.
+- [x] Distinguish measured, sourced, estimated, and unavailable values; unknown fees/costs are never silently treated as zero.
+- [x] Fail closed for stale/future snapshots and invalid numeric inputs.
+- [ ] Integrate authoritative position-specific accrued-fee data and validated cost estimates.
+- Gate: unit tests cover in-range, out-of-range, price moves, and missing/stale data; net PnL remains unavailable until all required components are supplied.
 
 ## Milestone 0.6 — Shadow strategy evaluation
 - Run strategies on live data without execution.
