@@ -28,7 +28,7 @@ An experimental agent for researching Meteora DLMM strategies, starting with rea
 
 The read-only collector uses the Meteora DLMM Data API at `https://dlmm.datapi.meteora.ag` and its paginated `/pools` endpoint. Field normalization follows the official API schema. Unit tests use controlled fixtures and do not, by themselves, prove that the live service is reachable.
 
-The current pool-list collector is discovery data only. A separate authoritative source for active bin and position/bin-level liquidity state must be implemented before calculating realistic DLMM position PnL or making strategy decisions.
+The current pool-list collector is discovery data only. The shadow backtest reports a passive buy-and-hold pair-price benchmark and excess return, but both remain price-series proxies. A separate authoritative source for active bin and position/bin-level liquidity state must be implemented before calculating realistic DLMM position PnL or making strategy decisions.
 
 ## Collect live market snapshots
 
