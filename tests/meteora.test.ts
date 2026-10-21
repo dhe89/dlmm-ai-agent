@@ -80,6 +80,52 @@ describe("MeteoraPoolCollector", () => {
     expect(Number.isFinite(Date.parse(result.retrievedAt))).toBe(true);
   });
 
+  it("collects raw pool details without inventing bin-level fields", async () => {
+    const payload = {
+      address: "Pool111",
+      current_price: 2.5,
+      token_x_amount: 100,
+      token_y_amount: 250
+    };
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      })
+    );
+    const collector = new MeteoraPoolCollector({
+      baseUrl: "https://example.test",
+      fetchImpl
+    });
+
+    const result = await collector.collectPoolDetails("Pool111");
+
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toBe("https://example.test/pools/Pool111");
+    expect(result.requestedAddress).toBe("Pool111");
+    expect(result.payload).toEqual(payload);
+    expect(result.source).toBe("https://example.test/pools/Pool111");
+    expect(Number.isFinite(Date.parse(result.retrievedAt))).toBe(true);
+    expect(result.payload).not.toHaveProperty("active_bin_id");
+  });
+
+  it("validates pool detail addresses, response shape, and mismatched addresses", async () => {
+    const collector = new MeteoraPoolCollector({
+      baseUrl: "https://example.test",
+      fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(JSON.stringify({ address: "DifferentPool" }), { status: 200 })
+      )
+    });
+    await expect(collector.collectPoolDetails("Pool111")).rejects.toThrow(/does not match request/);
+    await expect(collector.collectPoolDetails(" ")).rejects.toThrow(/poolAddress/);
+
+    const invalid = new MeteoraPoolCollector({
+      baseUrl: "https://example.test",
+      fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }))
+    });
+    await expect(invalid.collectPoolDetails("Pool111")).rejects.toThrow(/expected an object/);
+  });
+
   it("rejects invalid page sizes", async () => {
     const collector = new MeteoraPoolCollector({ fetchImpl: vi.fn<typeof fetch>() });
     await expect(collector.collectPools(0)).rejects.toThrow(/pageSize/);
