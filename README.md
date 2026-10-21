@@ -8,11 +8,11 @@ An experimental agent for researching Meteora DLMM strategies, starting with rea
 - [x] Unit tests for paper-only configuration, net-PnL arithmetic, and the read-only pool collector
 - [x] Collector normalization aligned with the official Meteora DLMM Data API pool-list schema
 - [x] Add a read-only live collector that appends timestamped pool snapshots to local JSONL storage
-- [ ] Verify live API availability and response compatibility in CI (the new live smoke test must pass)
-- [ ] Store timestamped market snapshots with stale-data checks
-- [ ] Paper execution and position/event ledger
+- [x] Verify live API availability and response compatibility in CI (live smoke test passes)
+- [x] Store timestamped market snapshots with stale-data checks
+- [x] Paper execution and position/event ledger
 - [ ] Bin-level position and fee valuation model
-- [ ] Strategy evaluation, risk controls, and repeatable reports
+- [x] Add a deterministic pair-price shadow backtest proxy with modeled costs and drawdown metrics\n- [ ] DLMM-specific strategy evaluation with authoritative position inventory and accrued fees
 
 ## Principles
 
