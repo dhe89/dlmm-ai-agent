@@ -15,7 +15,7 @@ describe("parseHistoricalSnapshots", () => {
   });
 
   it("rejects malformed records with line numbers", () => {
-    expect(() => parseHistoricalSnapshots("{}\nnot-json")).toThrow(/line 2/);
+    expect(() => parseHistoricalSnapshots(`${JSON.stringify({ poolAddress: "pool-A", capturedAt: "2026-01-01T00:00:00.000Z", currentPrice: 1 })}\nnot-json`)).toThrow(/line 2/);
     expect(() => parseHistoricalSnapshots(JSON.stringify({ poolAddress: "", capturedAt: "2026-01-01", currentPrice: 1 }))).toThrow(/poolAddress/);
     expect(() => parseHistoricalSnapshots(JSON.stringify({ poolAddress: "pool-A", capturedAt: "bad-date", currentPrice: 1 }))).toThrow(/capturedAt/);
     expect(() => parseHistoricalSnapshots(JSON.stringify({ poolAddress: "pool-A", capturedAt: "2026-01-01", currentPrice: 0 }))).toThrow(/currentPrice/);
