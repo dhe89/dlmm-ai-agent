@@ -30,7 +30,7 @@ The `PaperLedger` is an in-memory accounting component with explicit state expor
 - `PaperLedger.replay` rebuilds the ledger from an event sequence and checks transition order, prior marked value, and realized PnL against the replayed state.
 - Snapshot and journal writes are intended for a single writer; cross-process locking, fsync-level durability guarantees, and automatic snapshot-plus-journal rotation are not implemented.
 
-The valuation supplied to `markPosition` and `closePosition` must be produced by a separately validated valuation model. Until bin-level composition and fee mechanics are available, these values are test inputs or explicitly labeled estimates, not verified DLMM PnL.
+The valuation supplied to `markPosition` and `closePosition` must be produced by a separately validated valuation model. Ledger marking requires an explicit, finite valuation age no greater than 60 seconds; a missing age is rejected rather than assumed fresh. Until bin-level composition and fee mechanics are available, these values are test inputs or explicitly labeled estimates, not verified DLMM PnL.
 
 ## Initial safety invariants
 
