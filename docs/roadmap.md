@@ -55,6 +55,7 @@
 - [x] Record reproducible input fingerprints and snapshot interval quality statistics in walk-forward reports.
 - [x] Report positive-return fold frequency, selected-parameter diversity, and parameter stability.
 - [x] Add a fixed-parameter SMA-versus-EMA comparison with matched costs, passive benchmark, and reproducible input fingerprint.
+- [x] Compare SMA and EMA on chronological holdout and expanding-window walk-forward folds.
 - [ ] Compare multiple active strategies with DLMM position-level PnL and record reproducible experiments.
 - Gate: repeatable reports, no hidden look-ahead bias, and risk metrics alongside returns.
 
