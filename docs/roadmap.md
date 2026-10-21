@@ -54,7 +54,8 @@
 - [x] Add expanding-window walk-forward validation with per-fold parameter selection and unseen test segments.
 - [x] Record reproducible input fingerprints and snapshot interval quality statistics in walk-forward reports.
 - [x] Report positive-return fold frequency, selected-parameter diversity, and parameter stability.
-- [ ] Compare multiple active strategies and record reproducible experiments.
+- [x] Add a fixed-parameter SMA-versus-EMA comparison with matched costs, passive benchmark, and reproducible input fingerprint.
+- [ ] Compare multiple active strategies with DLMM position-level PnL and record reproducible experiments.
 - Gate: repeatable reports, no hidden look-ahead bias, and risk metrics alongside returns.
 
 ## Milestone 0.7 — Long-running deployment
