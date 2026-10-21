@@ -31,7 +31,9 @@ async function main(): Promise<void> {
 
   let detailCheck: { poolAddress: string; topLevelKeys: string[]; dataKeys?: string[] } | undefined;
   if (verifyDetails) {
-    const poolAddress = result.pools[0].address;
+    const firstPool = result.pools[0];
+    if (!firstPool) throw new Error("Meteora returned no pool to verify details");
+    const poolAddress = firstPool.address;
     const detail = await collector.collectPoolDetails(poolAddress);
     const payload = detail.payload;
     const data = payload.data;
