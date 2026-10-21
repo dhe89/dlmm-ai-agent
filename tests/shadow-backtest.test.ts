@@ -35,7 +35,7 @@ describe("runShadowBacktest", () => {
     expect(() => runShadowBacktest(series([1, 2, 3]), config)).toThrow(/insufficient/);
     expect(() => runShadowBacktest([
       ...series([1, 2, 3, 4]),
-      { ...series([5])[0]!, poolAddress: "pool-B" }
+      { ...series([5])[0]!, poolAddress: "pool-B", capturedAt: new Date(Date.UTC(2026, 0, 1, 0, 4)).toISOString() }
     ], config)).toThrow(/one pool/);
     expect(() => runShadowBacktest([
       ...series([1, 2, 3, 4]),
