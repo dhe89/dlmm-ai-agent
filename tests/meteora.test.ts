@@ -96,9 +96,49 @@ describe("MeteoraPoolCollector", () => {
   it("rejects HTTP errors", async () => {
     const collector = new MeteoraPoolCollector({
       baseUrl: "https://example.test",
+      maxRetries: 0,
       fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(new Response("no", { status: 503 }))
     });
     await expect(collector.collectPools()).rejects.toThrow(/HTTP 503/);
+  });
+
+  it("retries a rate-limited response with bounded backoff, then succeeds", async () => {
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response("slow down", {
+        status: 429,
+        headers: { "retry-after": "1" }
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ address: "Pool111", current_price: 1 }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      }));
+    const sleepImpl = vi.fn(async (_milliseconds: number) => undefined);
+    const collector = new MeteoraPoolCollector({
+      baseUrl: "https://example.test",
+      maxRetries: 2,
+      sleepImpl,
+      fetchImpl
+    });
+
+    const result = await collector.collectPools();
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(sleepImpl).toHaveBeenCalledWith(1_000);
+    expect(result.pools).toEqual([{ address: "Pool111", currentPrice: 1 }]);
+  });
+
+  it("does not retry client errors and rejects invalid retry settings", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response("bad request", { status: 400 }));
+    const collector = new MeteoraPoolCollector({
+      baseUrl: "https://example.test",
+      sleepImpl: async () => undefined,
+      fetchImpl
+    });
+    await expect(collector.collectPools()).rejects.toThrow(/HTTP 400/);
+    expect(fetchImpl).toHaveBeenCalledOnce();
+
+    expect(() => new MeteoraPoolCollector({ maxRetries: 6 })).toThrow(/maxRetries/);
+    expect(() => new MeteoraPoolCollector({ retryBaseDelayMs: -1 })).toThrow(/retryBaseDelayMs/);
   });
 
   it("rejects unexpected response structures", async () => {
