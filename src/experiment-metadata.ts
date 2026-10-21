@@ -9,6 +9,8 @@ export interface SnapshotDataQuality {
   minIntervalSeconds: number | null;
   medianIntervalSeconds: number | null;
   maxIntervalSeconds: number | null;
+  intervalDispersionRatio: number | null;
+  samplingWarnings: string[];
 }
 
 export interface ExperimentMetadata {
@@ -45,6 +47,22 @@ export function buildExperimentMetadata(
       ? intervals[Math.floor(intervals.length / 2)]!
       : (intervals[intervals.length / 2 - 1]! + intervals[intervals.length / 2]!) / 2;
 
+  const minIntervalSeconds = intervals.length ? intervals[0]! : null;
+  const medianIntervalSeconds = median;
+  const maxIntervalSeconds = intervals.length ? intervals.at(-1)! : null;
+  const intervalDispersionRatio = medianIntervalSeconds !== null && medianIntervalSeconds > 0 && maxIntervalSeconds !== null
+    ? maxIntervalSeconds / medianIntervalSeconds
+    : null;
+  const samplingWarnings: string[] = [];
+  if (intervalDispersionRatio !== null && intervalDispersionRatio > 3) {
+    samplingWarnings.push("largest snapshot gap exceeds 3x the median interval; fixed-bar indicators may be distorted");
+  }
+  if (minIntervalSeconds !== null && medianIntervalSeconds !== null && minIntervalSeconds < medianIntervalSeconds / 3) {
+    samplingWarnings.push("smallest snapshot interval is below one-third of the median; sampling cadence is uneven");
+  }
+  if (intervals.length === 0) {
+    samplingWarnings.push("only one observation; interval regularity cannot be assessed");
+  }
   return {
     inputSha256: createHash("sha256").update(rawInput, "utf8").digest("hex"),
     dataQuality: {
@@ -52,9 +70,11 @@ export function buildExperimentMetadata(
       observations: ordered.length,
       firstCapturedAt: ordered[0]!.capturedAt,
       lastCapturedAt: ordered.at(-1)!.capturedAt,
-      minIntervalSeconds: intervals.length ? intervals[0]! : null,
-      medianIntervalSeconds: median,
-      maxIntervalSeconds: intervals.length ? intervals.at(-1)! : null
+      minIntervalSeconds,
+      medianIntervalSeconds,
+      maxIntervalSeconds,
+      intervalDispersionRatio,
+      samplingWarnings
     }
   };
 }
