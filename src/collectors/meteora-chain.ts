@@ -1,5 +1,12 @@
-import DLMM from "@meteora-ag/dlmm";
+import { createRequire } from "node:module";
 import { Connection, PublicKey } from "@solana/web3.js";
+
+const require = createRequire(import.meta.url);
+const meteoraModule = require("@meteora-ag/dlmm") as {
+  default?: unknown;
+  DLMM?: unknown;
+};
+const DLMM = (meteoraModule.default ?? meteoraModule.DLMM ?? meteoraModule) as unknown;
 
 const DEFAULT_RPC_URL = "https://api.mainnet-beta.solana.com";
 
@@ -48,7 +55,7 @@ interface MeteoraPoolReader {
  * its default class under NodeNext resolution. Keep the SDK boundary explicit
  * while validating the runtime factory before using it.
  */
-const dlmmSdk = DLMM as unknown as {
+const dlmmSdk = DLMM as {
   create?: (
     connection: Connection,
     poolAddress: PublicKey,
