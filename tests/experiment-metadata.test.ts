@@ -18,9 +18,9 @@ describe("buildExperimentMetadata", () => {
     expect(first).toEqual(second);
     expect(first.inputSha256).toMatch(/^[a-f0-9]{64}$/);
     expect(first.dataQuality.observations).toBe(4);
-    expect(first.dataQuality.minIntervalSeconds).toBe(60);
-    expect(first.dataQuality.medianIntervalSeconds).toBe(60);
-    expect(first.dataQuality.maxIntervalSeconds).toBe(120);
+    expect(first.dataQuality.minIntervalSeconds).toBe(3600);
+    expect(first.dataQuality.medianIntervalSeconds).toBe(3600);
+    expect(first.dataQuality.maxIntervalSeconds).toBe(7200);
   });
 
   it("rejects mixed pools, duplicate timestamps and invalid prices", () => {
