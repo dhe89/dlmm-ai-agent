@@ -7,7 +7,8 @@ An experimental agent for researching Meteora DLMM strategies, starting with rea
 - [x] Repository foundation, TypeScript runtime scaffold, and GitHub Actions CI
 - [x] Unit tests for paper-only configuration, net-PnL arithmetic, and the read-only pool collector
 - [x] Collector normalization aligned with the official Meteora DLMM Data API pool-list schema
-- [ ] Verify live API availability and response compatibility in the running CI environment
+- [x] Add a read-only live collector that appends timestamped pool snapshots to local JSONL storage
+- [ ] Verify live API availability and response compatibility in CI (the new live smoke test must pass)
 - [ ] Store timestamped market snapshots with stale-data checks
 - [ ] Paper execution and position/event ledger
 - [ ] Bin-level position and fee valuation model
@@ -28,6 +29,16 @@ An experimental agent for researching Meteora DLMM strategies, starting with rea
 The read-only collector uses the Meteora DLMM Data API at `https://dlmm.datapi.meteora.ag` and its paginated `/pools` endpoint. Field normalization follows the official API schema. Unit tests use controlled fixtures and do not, by themselves, prove that the live service is reachable.
 
 The current pool-list collector is discovery data only. A separate authoritative source for active bin and position/bin-level liquidity state must be implemented before calculating realistic DLMM position PnL or making strategy decisions.
+
+## Collect live market snapshots
+
+The collector is read-only and does not connect a wallet or submit transactions. With Node.js 22 installed, run:
+
+```bash
+npm run collect:live -- --limit=20 --output=data/local/meteora-pools.jsonl
+```
+
+Each successful run appends JSON Lines records containing a schema version, source, retrieval timestamp, pool address, pair price, and any available volume/TVL fields. The default output path is `data/local/meteora-pools.jsonl`, which is ignored by Git. Do not interpret the pool pair price as USD. CI runs a small live API smoke test and writes its sample output to a temporary path rather than committing market data.
 
 ## Development
 
