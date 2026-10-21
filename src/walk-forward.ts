@@ -32,6 +32,10 @@ export interface WalkForwardResult {
   aggregateBuyHoldReturnPct: number;
   aggregateExcessReturnPct: number;
   worstFoldDrawdownPct: number;
+  positiveReturnFolds: number;
+  positiveReturnFoldPct: number;
+  distinctParameterSets: number;
+  parameterStabilityPct: number;
 }
 
 /**
@@ -129,6 +133,13 @@ export function runSmaWalkForward(
     (folds.reduce((equity, fold) => equity * (1 + fold.testResult.totalReturnPct / 100), 1) - 1) * 100;
   const aggregateBuyHoldReturnPct =
     (folds.reduce((equity, fold) => equity * (1 + fold.testResult.buyHoldReturnPct / 100), 1) - 1) * 100;
+  const positiveReturnFolds = folds.filter(fold => fold.testResult.totalReturnPct > 0).length;
+  const parameterCounts = new Map<string, number>();
+  for (const fold of folds) {
+    const key = `${fold.selectedFastWindow}/${fold.selectedSlowWindow}`;
+    parameterCounts.set(key, (parameterCounts.get(key) ?? 0) + 1);
+  }
+  const mostCommonParameterCount = Math.max(...parameterCounts.values());
   return {
     methodology: "expanding-window-walk-forward",
     warning: "Each test fold starts cold and resets notional; compounded test returns combine independent segments, not a continuous position. Pair-price proxy only, not DLMM LP PnL or a guarantee of future performance.",
@@ -137,6 +148,10 @@ export function runSmaWalkForward(
     aggregateTestReturnPct,
     aggregateBuyHoldReturnPct,
     aggregateExcessReturnPct: aggregateTestReturnPct - aggregateBuyHoldReturnPct,
-    worstFoldDrawdownPct: Math.max(...folds.map(fold => fold.testResult.maxDrawdownPct))
+    worstFoldDrawdownPct: Math.max(...folds.map(fold => fold.testResult.maxDrawdownPct)),
+    positiveReturnFolds,
+    positiveReturnFoldPct: positiveReturnFolds / folds.length * 100,
+    distinctParameterSets: parameterCounts.size,
+    parameterStabilityPct: mostCommonParameterCount / folds.length * 100
   };
 }
