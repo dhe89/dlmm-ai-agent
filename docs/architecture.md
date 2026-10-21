@@ -1,4 +1,4 @@
-# Architecture (initial)
+# Architecture
 
 ## Data flow
 
@@ -9,6 +9,18 @@
 5. **Paper execution** records virtual entries, exits, and rebalances only; it must not sign or send transactions.
 6. **Position valuation** estimates inventory value, accrued fees, and estimated costs.
 7. **Ledger/reporting** stores decisions and snapshots so results can be audited and compared.
+
+## Paper ledger contract
+
+The current `PaperLedger` is an in-memory accounting component:
+- Opening a position reserves cash equal to its allocated capital.
+- Marking a position updates the externally supplied total valuation; it does not infer LP value from pair-price movement.
+- Closing a position returns the supplied final valuation to cash and records realized PnL.
+- Equity is cash plus the marked value of open positions.
+- Realized and unrealized PnL are reported separately.
+- Ledger events are available in memory for audit; durable storage and restart/recovery are a later milestone.
+
+The valuation supplied to `markPosition` and `closePosition` must be produced by a separately validated valuation model. Until bin-level composition and fee mechanics are available, these values are test inputs or explicitly labeled estimates, not verified DLMM PnL.
 
 ## Initial safety invariants
 
@@ -22,7 +34,6 @@
 ## PnL definitions
 
 The reporting layer should show components separately:
-
 - **Fees:** estimated fee income attributable to the simulated position.
 - **Inventory/price PnL:** change in the value of the position's token inventory versus its entry valuation.
 - **Estimated execution costs:** hypothetical swap fees, slippage, and rebalance costs where applicable.
@@ -33,4 +44,4 @@ Avoid double-counting fees or inventory value. A simple token-price change alone
 
 ## Known limitation
 
-A credible DLMM simulator needs bin-level position composition and fee mechanics, not just pool APR or token price. We will verify which data can be sourced reliably before implementing the valuation model. Until then, any simplified model must be marked as an approximation and must not be treated as live-trading evidence.
+A credible DLMM simulator needs bin-level position composition and fee mechanics, not just pool APR or token price. The official indexed Data API exposes pool, OHLCV, position, and PnL endpoints, but the exact authoritative fields needed for a position-level simulator must be validated before using them. Until then, any simplified model must be marked as an approximation and must not be treated as live-trading evidence.
