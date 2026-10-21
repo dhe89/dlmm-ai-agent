@@ -4,6 +4,67 @@ import {
   normalizePool,
   toMarketSnapshot
 } from "../src/collectors/meteora.js";
+import { normalizeBinLiquidity } from "../src/collectors/meteora-chain.js";
+
+describe("normalizeBinLiquidity", () => {
+  it("normalizes official SDK fields and preserves decimal strings", () => {
+    expect(normalizeBinLiquidity({
+      binId: 123,
+      price: "0.000000000123",
+      pricePerToken: "1.23",
+      xAmount: "2500000",
+      yAmount: "3500000",
+      supply: "9000000"
+    })).toEqual({
+      binId: 123,
+      price: "0.000000000123",
+      pricePerToken: "1.23",
+      amountX: "2500000",
+      amountY: "3500000",
+      liquiditySupply: "9000000"
+    });
+  });
+
+  it("supports compatibility aliases and falls back to the SDK price", () => {
+    expect(normalizeBinLiquidity({
+      binId: 8,
+      price: "1.5",
+      amountX: "10",
+      amountY: "20",
+      liquiditySupply: "30"
+    })).toEqual({
+      binId: 8,
+      price: "1.5",
+      pricePerToken: "1.5",
+      amountX: "10",
+      amountY: "20",
+      liquiditySupply: "30"
+    });
+  });
+
+  it("fails closed when required bin fields are missing or invalid", () => {
+    expect(() => normalizeBinLiquidity({
+      binId: 8,
+      price: "1.5",
+      pricePerToken: "1.5",
+      xAmount: undefined,
+      yAmount: "20"
+    })).toThrow(/token X amount/);
+    expect(() => normalizeBinLiquidity({
+      binId: 8,
+      price: "NaN",
+      pricePerToken: "1.5",
+      xAmount: "10",
+      yAmount: "20"
+    })).toThrow(/bin price/);
+  });
+});
+
+import {
+  MeteoraPoolCollector,
+  normalizePool,
+  toMarketSnapshot
+} from "../src/collectors/meteora.js";
 
 describe("normalizePool", () => {
   it("normalizes the documented Meteora DLMM Data API fields", () => {
