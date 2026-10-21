@@ -16,6 +16,8 @@ coverage/
 
 # Logs and local state
 logs/
+data/local/
+
 *.log
 data/local/
 *.sqlite
