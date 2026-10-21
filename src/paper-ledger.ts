@@ -215,6 +215,8 @@ export class PaperLedger {
     if (![state.startingCapitalUsd, state.cashBalanceUsd, openValue].every(Number.isFinite)) {
       throw new Error("Paper ledger state contains non-finite accounting values");
     }
+    // Restore the validated cash balance as well as the positions and events.
+    ledger.cashBalanceUsd = state.cashBalanceUsd;
     return ledger;
   }
 
