@@ -12,7 +12,11 @@ const DEFAULT_RPC_URL = "https://api.mainnet-beta.solana.com";
 
 export interface BinLiquiditySnapshot {
   binId: number;
+  /** SDK price value as returned by Meteora. */
   price: string;
+  /** Token-adjusted price, preferred for strategy and valuation calculations. */
+  pricePerToken: string;
+  /** Token amounts as returned by the SDK; units/decimals must be sourced separately. */
   amountX: string;
   amountY: string;
   liquiditySupply?: string;
@@ -23,6 +27,7 @@ export interface ActiveBinSnapshot {
   retrievedAt: string;
   poolAddress: string;
   activeBinId: number;
+  /** Token-adjusted active-bin price. */
   activeBinPrice: string;
   binStep: number;
   bins: BinLiquiditySnapshot[];
@@ -36,10 +41,12 @@ interface MeteoraActiveBin {
 interface MeteoraBin {
   binId: number;
   price: unknown;
+  pricePerToken?: unknown;
   xAmount?: unknown;
   yAmount?: unknown;
   amountX?: unknown;
   amountY?: unknown;
+  supply?: unknown;
   liquiditySupply?: unknown;
   liquidity_supply?: unknown;
 }
@@ -47,13 +54,13 @@ interface MeteoraBin {
 interface MeteoraPoolReader {
   lbPair: { binStep: unknown };
   getActiveBin(): Promise<MeteoraActiveBin>;
-  getBinsAroundActiveBin(left: number, right: number): Promise<{ bins: MeteoraBin[] }>;
+  getBinsAroundActiveBin(left: number, right: number): Promise<{ activeBin: number; bins: MeteoraBin[] }>;
+  fromPricePerLamport(price: number): string;
 }
 
 /**
- * The published 1.9.14 declaration can expose the package namespace rather than
- * its default class under NodeNext resolution. Keep the SDK boundary explicit
- * while validating the runtime factory before using it.
+ * The SDK is loaded through its CommonJS entrypoint because its published ESM
+ * entrypoint imports a directory from Anchor that Node.js 22 rejects.
  */
 const dlmmSdk = DLMM as {
   create?: (
@@ -76,6 +83,26 @@ function numericString(value: unknown, field: string): string {
     throw new Error(`Invalid Meteora ${field}`);
   }
   return result;
+}
+
+/** Normalize the official SDK's BinLiquidity shape into a serializable snapshot. */
+export function normalizeBinLiquidity(bin: MeteoraBin): BinLiquiditySnapshot {
+  const amountX = bin.xAmount ?? bin.amountX;
+  const amountY = bin.yAmount ?? bin.amountY;
+  const liquidity = bin.supply ?? bin.liquiditySupply ?? bin.liquidity_supply;
+  const price = numericString(bin.price, "bin price");
+  const pricePerToken = numericString(bin.pricePerToken ?? bin.price, "bin token-adjusted price");
+
+  return {
+    binId: numericId(bin.binId, "bin ID"),
+    price,
+    pricePerToken,
+    amountX: numericString(amountX, "bin token X amount"),
+    amountY: numericString(amountY, "bin token Y amount"),
+    ...(liquidity !== undefined && liquidity !== null
+      ? { liquiditySupply: numericString(liquidity, "bin liquidity supply") }
+      : {})
+  };
 }
 
 /**
@@ -110,31 +137,29 @@ export async function collectActiveBinSnapshot(
   const binWindow = await pool.getBinsAroundActiveBin(binsEachSide, binsEachSide);
 
   const activeBinId = numericId(activeBin.binId, "active bin ID");
-  const bins: BinLiquiditySnapshot[] = binWindow.bins.map((bin) => {
-    const amountX = bin.amountX ?? bin.xAmount;
-    const amountY = bin.amountY ?? bin.yAmount;
-    const liquidity = bin.liquiditySupply ?? bin.liquidity_supply;
-    return {
-      binId: numericId(bin.binId, "bin ID"),
-      price: numericString(bin.price, "bin price"),
-      amountX: numericString(amountX, "bin token X amount"),
-      amountY: numericString(amountY, "bin token Y amount"),
-      ...(liquidity !== undefined && liquidity !== null
-        ? { liquiditySupply: numericString(liquidity, "bin liquidity supply") }
-        : {})
-    };
-  }).sort((a, b) => a.binId - b.binId);
+  if (numericId(binWindow.activeBin, "bin-window active bin ID") !== activeBinId) {
+    throw new Error("Meteora active-bin ID changed during snapshot collection; retry for a consistent snapshot");
+  }
+
+  const bins = binWindow.bins
+    .map(normalizeBinLiquidity)
+    .sort((a, b) => a.binId - b.binId);
 
   if (!bins.some((bin) => bin.binId === activeBinId)) {
     throw new Error("Meteora bin window did not include the active bin");
   }
+
+  const activeBinPrice = numericString(
+    pool.fromPricePerLamport(Number(activeBin.price)),
+    "active bin token-adjusted price"
+  );
 
   return {
     source: rpcUrl,
     retrievedAt: new Date().toISOString(),
     poolAddress: publicKey.toBase58(),
     activeBinId,
-    activeBinPrice: numericString(activeBin.price, "active bin price"),
+    activeBinPrice,
     binStep: numericId(pool.lbPair.binStep, "bin step"),
     bins
   };
