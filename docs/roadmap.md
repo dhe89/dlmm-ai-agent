@@ -49,6 +49,7 @@
 - [ ] Run strategies on live data without execution.
 - [x] Compare the SMA proxy against a passive buy-and-hold pair-price benchmark, including excess return.
 - [x] Add a fail-closed JSONL historical snapshot loader and reproducible CLI report.
+- [x] Add a bounded, deterministic SMA parameter sweep ranked by excess return and drawdown.
 - [ ] Compare multiple active strategies and record reproducible experiments.
 - Gate: repeatable reports, no hidden look-ahead bias, and risk metrics alongside returns.
 
