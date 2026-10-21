@@ -100,3 +100,11 @@ export function validateSmaEmaOnHoldout(
     }
   };
 }
+
+/** Backward-compatible SMA-only API; the result also includes the EMA holdout comparison. */
+export function validateSmaOnHoldout(
+  snapshots: readonly MarketSnapshot[],
+  config: HoldoutValidationConfig
+): HoldoutValidationResult {
+  return validateSmaEmaOnHoldout(snapshots, config);
+}
