@@ -86,3 +86,51 @@ describe("valueInventory", () => {
     })).toThrow(/future/);
   });
 });
+
+import { valueRawTokenFeesUsd } from "../src/valuation.js";
+
+describe("valueRawTokenFeesUsd", () => {
+  it("converts raw fee token amounts using mint decimals and independent USD marks", () => {
+    expect(valueRawTokenFeesUsd({
+      feeXRaw: "1500000",
+      feeYRaw: "250000000",
+      tokenXDecimals: 6,
+      tokenYDecimals: 9,
+      tokenXPriceUsd: 2,
+      tokenYPriceUsd: 1,
+      evidence: "sourced"
+    })).toEqual({
+      feeXTokens: 1.5,
+      feeYTokens: 0.25,
+      feesUsd: 3.25,
+      evidence: "sourced"
+    });
+  });
+
+  it("preserves the supplied evidence classification", () => {
+    expect(valueRawTokenFeesUsd({
+      feeXRaw: "100",
+      feeYRaw: "0",
+      tokenXDecimals: 2,
+      tokenYDecimals: 9,
+      tokenXPriceUsd: 4,
+      tokenYPriceUsd: 1,
+      evidence: "estimated"
+    }).evidence).toBe("estimated");
+  });
+
+  it("rejects malformed raw amounts, invalid decimals, and numeric overflow", () => {
+    const base = {
+      feeXRaw: "10",
+      feeYRaw: "0",
+      tokenXDecimals: 2,
+      tokenYDecimals: 9,
+      tokenXPriceUsd: 4,
+      tokenYPriceUsd: 1,
+      evidence: "sourced" as const
+    };
+    expect(() => valueRawTokenFeesUsd({ ...base, feeXRaw: "-1" })).toThrow(/base units/);
+    expect(() => valueRawTokenFeesUsd({ ...base, tokenXDecimals: 31 })).toThrow(/tokenXDecimals/);
+    expect(() => valueRawTokenFeesUsd({ ...base, feeXRaw: "9".repeat(400) })).toThrow(/numeric range/);
+  });
+});
