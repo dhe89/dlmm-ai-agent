@@ -1,5 +1,6 @@
 import type { MarketSnapshot } from "./domain.js";
 import { runShadowBacktest, type ShadowBacktestResult } from "./shadow-backtest.js";
+import { runEmaBacktest, type EmaBacktestResult } from "./ema-backtest.js";
 import { runSmaParameterSweep, type StrategySweepConfig } from "./strategy-sweep.js";
 
 export interface WalkForwardConfig extends StrategySweepConfig {
@@ -21,6 +22,7 @@ export interface WalkForwardFold {
   selectedSlowWindow: number;
   trainingResult: ShadowBacktestResult;
   testResult: ShadowBacktestResult;
+  emaTestResult: EmaBacktestResult;
 }
 
 export interface WalkForwardResult {
@@ -36,6 +38,11 @@ export interface WalkForwardResult {
   positiveReturnFoldPct: number;
   distinctParameterSets: number;
   parameterStabilityPct: number;
+  aggregateEmaTestReturnPct: number;
+  aggregateEmaExcessReturnPct: number;
+  aggregateSmaMinusEmaReturnPct: number;
+  emaPositiveReturnFolds: number;
+  emaPositiveReturnFoldPct: number;
 }
 
 /**
@@ -107,12 +114,14 @@ export function runSmaWalkForward(
     if (test.length < selected.slowWindow + 1) {
       throw new Error(`not enough observations in test fold ${index + 1} for selected slowWindow ${selected.slowWindow}`);
     }
-    const testResult = runShadowBacktest(test, {
+    const testConfig = {
       fastWindow: selected.fastWindow,
       slowWindow: selected.slowWindow,
       costBps: config.costBps,
       initialCapitalUsd: config.initialCapitalUsd
-    });
+    };
+    const testResult = runShadowBacktest(test, testConfig);
+    const emaTestResult = runEmaBacktest(test, testConfig);
     folds.push({
       fold: index + 1,
       trainObservations: train.length,
@@ -124,7 +133,8 @@ export function runSmaWalkForward(
       selectedFastWindow: selected.fastWindow,
       selectedSlowWindow: selected.slowWindow,
       trainingResult: selected.result,
-      testResult
+      testResult,
+      emaTestResult
     });
     testStartIndex += size;
   }
@@ -134,6 +144,9 @@ export function runSmaWalkForward(
   const aggregateBuyHoldReturnPct =
     (folds.reduce((equity, fold) => equity * (1 + fold.testResult.buyHoldReturnPct / 100), 1) - 1) * 100;
   const positiveReturnFolds = folds.filter(fold => fold.testResult.totalReturnPct > 0).length;
+  const aggregateEmaTestReturnPct =
+    (folds.reduce((equity, fold) => equity * (1 + fold.emaTestResult.totalReturnPct / 100), 1) - 1) * 100;
+  const emaPositiveReturnFolds = folds.filter(fold => fold.emaTestResult.totalReturnPct > 0).length;
   const parameterCounts = new Map<string, number>();
   for (const fold of folds) {
     const key = `${fold.selectedFastWindow}/${fold.selectedSlowWindow}`;
@@ -152,6 +165,11 @@ export function runSmaWalkForward(
     positiveReturnFolds,
     positiveReturnFoldPct: positiveReturnFolds / folds.length * 100,
     distinctParameterSets: parameterCounts.size,
-    parameterStabilityPct: mostCommonParameterCount / folds.length * 100
+    parameterStabilityPct: mostCommonParameterCount / folds.length * 100,
+    aggregateEmaTestReturnPct,
+    aggregateEmaExcessReturnPct: aggregateEmaTestReturnPct - aggregateBuyHoldReturnPct,
+    aggregateSmaMinusEmaReturnPct: aggregateTestReturnPct - aggregateEmaTestReturnPct,
+    emaPositiveReturnFolds,
+    emaPositiveReturnFoldPct: emaPositiveReturnFolds / folds.length * 100
   };
 }
