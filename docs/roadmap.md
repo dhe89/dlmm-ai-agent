@@ -34,6 +34,7 @@
 - [x] Establish authoritative bin-level inputs and document the remaining position-specific data requirements.
 - [x] Add conservative inventory valuation using decimal-adjusted token quantities and independently sourced USD marks.
 - [x] Keep inventory PnL separate from position-specific fees and execution/network costs.
+- [x] Add a pure helper to convert sourced raw token fee amounts into USD using token decimals and independent USD marks.
 - [x] Distinguish measured, sourced, estimated, and unavailable values; unknown fees/costs are never silently treated as zero.
 - [x] Fail closed for stale/future snapshots and invalid numeric inputs.
 - [ ] Integrate authoritative position-specific accrued-fee data and validated cost estimates.
