@@ -19,8 +19,19 @@ describe("runShadowBacktest", () => {
     expect(result.observations).toBe(8);
     expect(result.equityCurve).toHaveLength(8);
     expect(result.finalEquityUsd).toBeLessThanOrEqual(1_300);
+    expect(result.buyHoldFinalEquityUsd).toBeGreaterThan(0);
+    expect(result.buyHoldReturnPct).toBeCloseTo((result.buyHoldFinalEquityUsd / config.initialCapitalUsd - 1) * 100);
+    expect(result.excessReturnPct).toBeCloseTo(result.totalReturnPct - result.buyHoldReturnPct);
     expect(result.maxDrawdownPct).toBeGreaterThanOrEqual(0);
     expect(result.warning).toMatch(/not DLMM LP PnL/);
+  });
+
+  it("computes a passive benchmark from the first and last observed prices", () => {
+    const result = runShadowBacktest(series([10, 12, 15, 20]), {
+      ...config, costBps: 0
+    });
+    expect(result.buyHoldFinalEquityUsd).toBe(2_000);
+    expect(result.buyHoldReturnPct).toBe(100);
   });
 
   it("does not use a signal formed on the same bar for that bar's return", () => {
