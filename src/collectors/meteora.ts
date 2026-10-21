@@ -7,6 +7,11 @@ export interface MeteoraPoolCollectorOptions {
   baseUrl?: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
+  /** Number of retries after the initial request. */
+  maxRetries?: number;
+  /** Exponential backoff base delay in milliseconds. */
+  retryBaseDelayMs?: number;
+  sleepImpl?: (milliseconds: number) => Promise<void>;
 }
 
 export interface MeteoraPoolSummary {
@@ -72,11 +77,25 @@ export class MeteoraPoolCollector {
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
+  private readonly maxRetries: number;
+  private readonly retryBaseDelayMs: number;
+  private readonly sleepImpl: (milliseconds: number) => Promise<void>;
 
   constructor(options: MeteoraPoolCollectorOptions = {}) {
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.maxRetries = options.maxRetries ?? 2;
+    this.retryBaseDelayMs = options.retryBaseDelayMs ?? 250;
+    this.sleepImpl = options.sleepImpl ?? ((milliseconds) =>
+      new Promise((resolve) => setTimeout(resolve, milliseconds))
+    );
+    if (!Number.isInteger(this.maxRetries) || this.maxRetries < 0 || this.maxRetries > 5) {
+      throw new Error("maxRetries must be an integer between 0 and 5");
+    }
+    if (!Number.isFinite(this.retryBaseDelayMs) || this.retryBaseDelayMs < 0) {
+      throw new Error("retryBaseDelayMs must be a finite non-negative number");
+    }
   }
 
   async collectPools(pageSize = 20): Promise<CollectionResult> {
@@ -92,23 +111,7 @@ export class MeteoraPoolCollector {
     url.searchParams.set("page_size", String(pageSize));
     url.searchParams.set("sort_by", "volume_24h:desc");
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    let response: Response;
-    try {
-      response = await this.fetchImpl(url.toString(), {
-        method: "GET",
-        headers: { accept: "application/json" },
-        signal: controller.signal
-      });
-    } catch (error) {
-      if (controller.signal.aborted) {
-        throw new Error(`Meteora request timed out after ${this.timeoutMs}ms`);
-      }
-      throw new Error(`Meteora request failed: ${error instanceof Error ? error.message : "unknown error"}`);
-    } finally {
-      clearTimeout(timer);
-    }
+    const response = await this.requestWithRetry(url.toString());
 
     if (!response.ok) {
       throw new Error(`Meteora API returned HTTP ${response.status}`);
@@ -140,6 +143,48 @@ export class MeteoraPoolCollector {
       pools
     };
   }
+  private async requestWithRetry(url: string): Promise<Response> {
+    for (let attempt = 0; ; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      let response: Response | undefined;
+      let failure: unknown;
+      try {
+        response = await this.fetchImpl(url, {
+          method: "GET",
+          headers: { accept: "application/json" },
+          signal: controller.signal
+        });
+      } catch (error) {
+        failure = controller.signal.aborted
+          ? new Error(`Meteora request timed out after ${this.timeoutMs}ms`)
+          : new Error(`Meteora request failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      } finally {
+        clearTimeout(timer);
+      }
+
+      if (response?.ok) return response;
+      const retryableStatus = response !== undefined &&
+        (response.status === 429 || response.status >= 500);
+      const shouldRetry = attempt < this.maxRetries &&
+        (failure !== undefined || retryableStatus);
+      if (!shouldRetry) {
+        if (failure !== undefined) throw failure;
+        if (response) return response;
+        throw new Error("Meteora request failed: unknown error");
+      }
+
+      const retryAfter = response?.headers.get("retry-after");
+      const retryAfterSeconds = retryAfter !== null && retryAfter !== undefined
+        ? Number(retryAfter)
+        : Number.NaN;
+      const retryDelay = Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0
+        ? Math.min(retryAfterSeconds * 1_000, 5_000)
+        : Math.min(this.retryBaseDelayMs * (2 ** attempt), 5_000);
+      await this.sleepImpl(retryDelay);
+    }
+  }
+
 }
 
 /**
