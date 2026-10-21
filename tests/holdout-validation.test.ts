@@ -30,6 +30,9 @@ describe("validateSmaOnHoldout", () => {
     expect(result.trainEnd < result.holdoutStart).toBe(true);
     expect(result.selectedSlowWindow).toBeGreaterThan(result.selectedFastWindow);
     expect(result.holdoutResult.observations).toBe(12);
+    expect(result.holdoutEmaResult.observations).toBe(12);
+    expect(Number.isFinite(result.holdoutComparison.smaMinusEmaReturnPct)).toBe(true);
+    expect(["SMA", "EMA", "tie"]).toContain(result.holdoutComparison.lowerDrawdownStrategy);
     expect(result.warning).toContain("starts cold");
   });
 
