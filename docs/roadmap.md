@@ -15,8 +15,8 @@
 - [x] Add mocked unit tests for normalization, invalid responses, and HTTP errors.
 - [x] Verify live endpoint behavior from the CI/cloud runtime with a live smoke test.
 - [x] Add append-only local JSONL snapshot persistence with source and retrieval timestamp.
-- [ ] Add bounded retry/backoff and rate-limit handling inside the collector.
-- [ ] Add stale-data checks before any strategy consumes snapshots.
+- [x] Add bounded retries with exponential backoff for network failures, HTTP 429, and HTTP 5xx responses.
+- [x] Add fail-closed validation for stale/future snapshots and invalid numeric fields.
 - [ ] Identify an authoritative source for active-bin IDs and bin-level liquidity/position state.
 - Gate: real response samples are validated and saved with source and retrieval time; no transaction signing code.
 
