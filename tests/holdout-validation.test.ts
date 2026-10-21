@@ -33,7 +33,7 @@ describe("validateSmaOnHoldout", () => {
     expect(result.holdoutEmaResult.observations).toBe(12);
     expect(Number.isFinite(result.holdoutComparison.smaMinusEmaReturnPct)).toBe(true);
     expect(["SMA", "EMA", "tie"]).toContain(result.holdoutComparison.lowerDrawdownStrategy);
-    expect(result.warning).toContain("starts cold");
+    expect(result.warning).toContain("start cold");
   });
 
   it("rejects invalid split fractions and segments too short for the requested windows", () => {
