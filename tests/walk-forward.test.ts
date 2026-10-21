@@ -35,6 +35,11 @@ describe("runSmaWalkForward", () => {
     expect(result.distinctParameterSets).toBeGreaterThanOrEqual(1);
     expect(result.parameterStabilityPct).toBeGreaterThan(0);
     expect(result.parameterStabilityPct).toBeLessThanOrEqual(100);
+    expect(Number.isFinite(result.aggregateEmaTestReturnPct)).toBe(true);
+    expect(Number.isFinite(result.aggregateSmaMinusEmaReturnPct)).toBe(true);
+    expect(result.folds[0]!.emaTestResult.observations).toBe(result.folds[0]!.testObservations);
+    expect(result.emaPositiveReturnFoldPct).toBeGreaterThanOrEqual(0);
+    expect(result.emaPositiveReturnFoldPct).toBeLessThanOrEqual(100);
   });
 
   it("rejects invalid fold counts, undersized data and test folds too short for SMA warm-up", () => {
