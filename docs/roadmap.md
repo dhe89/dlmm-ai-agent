@@ -48,6 +48,7 @@
 - [ ] Validate strategies against a sufficiently long historical data set.
 - [ ] Run strategies on live data without execution.
 - [x] Compare the SMA proxy against a passive buy-and-hold pair-price benchmark, including excess return.
+- [x] Add a fail-closed JSONL historical snapshot loader and reproducible CLI report.
 - [ ] Compare multiple active strategies and record reproducible experiments.
 - Gate: repeatable reports, no hidden look-ahead bias, and risk metrics alongside returns.
 
