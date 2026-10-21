@@ -29,6 +29,14 @@ export interface CollectionResult {
   pools: MeteoraPoolSummary[];
 }
 
+/** Raw detail payload is preserved until the endpoint schema is verified. */
+export interface PoolDetailResult {
+  source: string;
+  retrievedAt: string;
+  requestedAddress: string;
+  payload: Record<string, unknown>;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return undefined;
@@ -143,6 +151,46 @@ export class MeteoraPoolCollector {
       pools
     };
   }
+  /**
+   * Fetch the official per-pool detail endpoint without assuming undocumented
+   * fields exist. Keep the payload intact for schema inspection and validation.
+   */
+  async collectPoolDetails(poolAddress: string): Promise<PoolDetailResult> {
+    if (!poolAddress.trim()) throw new Error("poolAddress must not be empty");
+    if (!Number.isFinite(this.timeoutMs) || this.timeoutMs <= 0) {
+      throw new Error("timeoutMs must be a positive finite number");
+    }
+
+    const url = new URL(`${this.baseUrl}/pools/${encodeURIComponent(poolAddress)}`);
+    const response = await this.requestWithRetry(url.toString());
+    if (!response.ok) {
+      throw new Error(`Meteora API returned HTTP ${response.status}`);
+    }
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error("Meteora API returned invalid JSON");
+    }
+
+    const root = asRecord(payload);
+    if (!root) {
+      throw new Error("Unexpected Meteora pool detail response: expected an object");
+    }
+    const detail = asRecord(root.data) ?? root;
+    if (typeof detail.address === "string" && detail.address !== poolAddress) {
+      throw new Error("Meteora pool detail response address does not match request");
+    }
+
+    return {
+      source: url.toString(),
+      retrievedAt: new Date().toISOString(),
+      requestedAddress: poolAddress,
+      payload: root
+    };
+  }
+
   private async requestWithRetry(url: string): Promise<Response> {
     for (let attempt = 0; ; attempt += 1) {
       const controller = new AbortController();
