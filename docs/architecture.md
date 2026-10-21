@@ -10,15 +10,17 @@
 6. **Position valuation** estimates inventory value, accrued fees, and estimated costs.
 7. **Ledger/reporting** stores decisions and snapshots so results can be audited and compared.
 
-## Paper ledger contract
+## Paper ledger and recovery
 
-The current `PaperLedger` is an in-memory accounting component:
+The `PaperLedger` is an in-memory accounting component with explicit state export and validated restoration:
 - Opening a position reserves cash equal to its allocated capital.
 - Marking a position updates the externally supplied total valuation; it does not infer LP value from pair-price movement.
 - Closing a position returns the supplied final valuation to cash and records realized PnL.
 - Equity is cash plus the marked value of open positions.
 - Realized and unrealized PnL are reported separately.
-- Ledger events are available in memory for audit; durable storage and restart/recovery are a later milestone.
+- `PaperLedgerStore` saves versioned JSON snapshots using a temporary file and atomic rename, then validates accounting invariants on load.
+- Missing snapshots return no ledger; malformed JSON and inconsistent cash accounting fail closed.
+- The current store is a snapshot mechanism, not yet an append-only event journal. Concurrent writers and crash-safe event replay are not yet supported.
 
 The valuation supplied to `markPosition` and `closePosition` must be produced by a separately validated valuation model. Until bin-level composition and fee mechanics are available, these values are test inputs or explicitly labeled estimates, not verified DLMM PnL.
 
