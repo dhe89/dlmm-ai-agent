@@ -41,8 +41,10 @@
 - Gate: unit tests cover in-range, out-of-range, price moves, and missing/stale data; net PnL remains unavailable until all required components are supplied.
 
 ## Milestone 0.6 — Shadow strategy evaluation
-- Run strategies on live data without execution.
-- Compare strategies and record experiments.
+- [x] Add deterministic pool discovery screening using minimum USD TVL/volume and volume-to-TVL ranking.
+- [x] Reject stale snapshots and exclude pools missing required USD metrics; do not infer pair price as USD.
+- [ ] Run strategies on live data without execution.
+- [ ] Compare strategies and record experiments.
 - Gate: repeatable reports, no hidden look-ahead bias, and risk metrics alongside returns.
 
 ## Milestone 0.7 — Long-running deployment
