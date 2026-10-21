@@ -83,7 +83,7 @@ describe("markLedgerFromValuation", () => {
     });
 
     expect(() => markLedgerFromValuation(
-      ledger, "pos-1", valuation({ inventoryValueUsd: 1, feesUsd: 0, executionCostsUsd: 5, networkCostsUsd: 0 })
+      ledger, "pos-1", valuation({ inventoryValueUsd: 1, feesUsd: 0, executionCostsUsd: 5, networkCostsUsd: 0, netPnlUsd: -15 })
     )).toThrow(/resulting value/);
     expect(() => markLedgerFromValuation(
       ledger, "pos-1", valuation({ inventoryValueUsd: Number.POSITIVE_INFINITY })
