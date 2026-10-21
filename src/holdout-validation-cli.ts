@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseHistoricalSnapshots } from "./historical-backtest.js";
-import { validateSmaOnHoldout } from "./holdout-validation.js";
+import { validateSmaEmaOnHoldout } from "./holdout-validation.js";
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -37,9 +37,9 @@ async function main(): Promise<void> {
     initialCapitalUsd: numberOption("capital-usd", 1_000),
     trainFraction: numberOption("train-fraction", 0.7)
   };
-  const result = validateSmaOnHoldout(snapshots, config);
+  const result = validateSmaEmaOnHoldout(snapshots, config);
   console.log(JSON.stringify({
-    reportType: "historical-sma-holdout-validation",
+    reportType: "historical-sma-ema-holdout-validation",
     input: resolve(input),
     config,
     result
