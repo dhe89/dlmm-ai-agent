@@ -1,0 +1,27 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id.json
+wallet.json
+keypair.json
+
+# Node / TypeScript
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Logs and local state
+logs/
+*.log
+data/local/
+*.sqlite
+*.db
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
