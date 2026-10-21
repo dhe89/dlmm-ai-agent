@@ -13,7 +13,7 @@
 - [x] Add a read-only collector for the official Meteora DLMM Data API `/pools` endpoint.
 - [x] Align pool-list normalization with the published API schema.
 - [x] Add mocked unit tests for normalization, invalid responses, and HTTP errors.
-- [ ] Verify live endpoint behavior from the CI/cloud runtime (live smoke test added; awaiting a green run).
+- [x] Verify live endpoint behavior from the CI/cloud runtime with a live smoke test.
 - [x] Add append-only local JSONL snapshot persistence with source and retrieval timestamp.
 - [ ] Add bounded retry/backoff and rate-limit handling inside the collector.
 - [ ] Add stale-data checks before any strategy consumes snapshots.
@@ -21,8 +21,10 @@
 - Gate: real response samples are validated and saved with source and retrieval time; no transaction signing code.
 
 ## Milestone 0.4 — Paper ledger
-- Record virtual decisions, positions, and events.
-- Support deterministic open, update, close, and restart/recovery behavior.
+- [x] Add deterministic in-memory ledger transitions for opening, marking, and closing virtual positions.
+- [x] Track cash, open position value, equity, realized PnL, and unrealized PnL separately.
+- [x] Add tests for accounting invariants, overspending, duplicate IDs, timestamp order, and closed positions.
+- [ ] Add durable append-only event persistence and restart/recovery.
 - Gate: deterministic tests cover ledger transitions, accounting invariants, and recovery.
 
 ## Milestone 0.5 — Fee and valuation model
