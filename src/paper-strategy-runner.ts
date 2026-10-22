@@ -18,6 +18,7 @@ function positiveInt(name: string, fallback: number): number {
 function average(values: readonly number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
+
 export function calculatePaperStrategySignal(snapshots: readonly MarketSnapshot[], fastWindow: number, slowWindow: number): {
   signal: "LONG" | "CASH" | "WARMING_UP";
   fastAverage: number | null;
@@ -27,17 +28,31 @@ export function calculatePaperStrategySignal(snapshots: readonly MarketSnapshot[
   if (!Number.isInteger(fastWindow) || fastWindow < 1) throw new Error("--fast-window must be a positive integer");
   if (!Number.isInteger(slowWindow) || slowWindow < 2) throw new Error("--slow-window must be an integer greater than one");
   if (fastWindow >= slowWindow) throw new Error("--fast-window must be smaller than --slow-window");
-  if (snapshots.length < slowWindow) return { signal: "WARMING_UP", fastAverage: null, slowAverage: null, observations: snapshots.length };
-  const ordered = [...snapshots].sort((a,b)=>Date.parse(a.capturedAt)-Date.parse(b.capturedAt));
+
+  // Validate every supplied observation before the warm-up shortcut. Invalid
+  // data must never be silently accepted just because the window is incomplete.
+  const ordered = [...snapshots].sort((a, b) => Date.parse(a.capturedAt) - Date.parse(b.capturedAt));
   let previousTime = Number.NEGATIVE_INFINITY;
+  let poolAddress: string | undefined;
   for (const snapshot of ordered) {
+    if (!snapshot.poolAddress.trim()) throw new Error("history contains an empty pool address");
+    if (poolAddress !== undefined && snapshot.poolAddress !== poolAddress) {
+      throw new Error("history must contain snapshots for exactly one pool");
+    }
+    poolAddress = snapshot.poolAddress;
     const timestamp = Date.parse(snapshot.capturedAt);
     if (!Number.isFinite(timestamp)) throw new Error("history contains invalid timestamps");
     if (timestamp <= previousTime) throw new Error("history timestamps must be unique");
     previousTime = timestamp;
+    if (!Number.isFinite(snapshot.currentPrice) || snapshot.currentPrice <= 0) {
+      throw new Error("history contains invalid pair prices");
+    }
   }
-  const prices = ordered.map(x=>x.currentPrice);
-  if (prices.some(x=>!Number.isFinite(x)||x<=0)) throw new Error("history contains invalid pair prices");
+
+  if (ordered.length < slowWindow) {
+    return { signal: "WARMING_UP", fastAverage: null, slowAverage: null, observations: ordered.length };
+  }
+  const prices = ordered.map((snapshot) => snapshot.currentPrice);
   const fastAverage = average(prices.slice(-fastWindow));
   const slowAverage = average(prices.slice(-slowWindow));
   return { signal: fastAverage > slowAverage ? "LONG" : "CASH", fastAverage, slowAverage, observations: prices.length };
@@ -54,6 +69,7 @@ async function main(): Promise<void> {
   const historyPath = resolve(option("history") ?? "data/local/strategy-snapshots.jsonl");
   const signalPath = resolve(option("signals") ?? "data/local/strategy-signals.jsonl");
   const collector = new MeteoraPoolCollector();
+
   for (let i = 0; i < iterations; i += 1) {
     const result = await collector.collectPools(1000);
     const pool = result.pools.find((candidate) => candidate.address === poolAddress);
@@ -69,13 +85,9 @@ async function main(): Promise<void> {
     };
     await mkdir(dirname(historyPath), { recursive: true });
     await appendFile(historyPath, JSON.stringify(snapshot) + "\n", "utf8");
-    let history: MarketSnapshot[] = [snapshot];
-    try {
-      history = parseHistoricalSnapshots(await readFile(historyPath, "utf8"))
-        .filter((item) => item.poolAddress === poolAddress);
-    } catch (error) {
-      if (!(error instanceof Error && error.message.includes("no snapshot records"))) throw error;
-    }
+
+    const history = parseHistoricalSnapshots(await readFile(historyPath, "utf8"))
+      .filter((item) => item.poolAddress === poolAddress);
     const resultSignal = calculatePaperStrategySignal(history, fastWindow, slowWindow);
     let previousSignal: PaperSignal | null = null;
     try {
