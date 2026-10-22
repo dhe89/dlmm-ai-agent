@@ -1,5 +1,7 @@
 import { PaperLedger } from "./paper-ledger.js";
 import { PaperLedgerStore } from "./paper-ledger-store.js";
+import { markLedgerFromValuation } from "./paper-valuation.js";
+import type { ValuationResult } from "./valuation.js";
 
 export interface PaperPortfolioReport {
   mode: "paper-only";
@@ -38,6 +40,9 @@ export class PaperPortfolioService {
   }
   async close(input: { id: string; value: number; at?: string }) {
     return this.mutate((ledger) => ledger.closePosition(input.id, input.at ?? new Date().toISOString(), input.value));
+  }
+  async markFromValuation(input: { id: string; valuation: ValuationResult }) {
+    return this.mutate((ledger) => markLedgerFromValuation(ledger, input.id, input.valuation));
   }
   private async mutate<T>(operation: (ledger: PaperLedger) => T): Promise<T> {
     if (this.busy) throw new Error("portfolio is processing another update; retry shortly");
