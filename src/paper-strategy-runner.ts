@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { MeteoraPoolCollector } from "./collectors/meteora.js";
 import type { MarketSnapshot } from "./domain.js";
@@ -17,6 +17,29 @@ function positiveInt(name: string, fallback: number): number {
 }
 function average(values: readonly number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+export interface PaperStrategyRunnerStatus {
+  state: "running" | "healthy" | "retrying" | "stopped";
+  poolAddress: string;
+  checkedAt: string;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  nextRetryAt: string | null;
+}
+
+export async function persistPaperStrategyRunnerStatus(path: string, status: PaperStrategyRunnerStatus): Promise<void> {
+  const target = resolve(path);
+  await mkdir(dirname(target), { recursive: true });
+  const temporary = `${target}.${process.pid}.tmp`;
+  try {
+    await writeFile(temporary, JSON.stringify(status, null, 2) + "\\n", { encoding: "utf8", flag: "w" });
+    await rename(temporary, target);
+  } catch (error) {
+    const { rm } = await import("node:fs/promises");
+    await rm(temporary, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }
 
 export function calculatePaperStrategySignal(snapshots: readonly MarketSnapshot[], fastWindow: number, slowWindow: number): {
@@ -101,9 +124,12 @@ async function main(): Promise<void> {
   const iterations = positiveInt("iterations", 1);
   const historyPath = resolve(option("history") ?? "data/local/strategy-snapshots.jsonl");
   const signalPath = resolve(option("signals") ?? "data/local/strategy-signals.jsonl");
+  const statusPath = resolve(option("status") ?? "data/local/strategy-runner-status.json");
+  let lastSuccessAt: string | null = null;
   const collector = new MeteoraPoolCollector();
 
   const forever = process.argv.slice(2).includes("--forever");
+  await persistPaperStrategyRunnerStatus(statusPath, { state: "running", poolAddress, checkedAt: new Date().toISOString(), lastSuccessAt, lastError: null, nextRetryAt: null });
   for (let i = 0; forever || i < iterations; i += 1) {
     try {
     const result = await collector.collectPools(1000);
@@ -171,13 +197,18 @@ async function main(): Promise<void> {
       await appendFile(signalPath, JSON.stringify(report) + "\n", "utf8");
     }
     console.log(JSON.stringify({ ...report, signalAlreadyRecorded }));
+    lastSuccessAt = snapshot.capturedAt;
+    await persistPaperStrategyRunnerStatus(statusPath, { state: "healthy", poolAddress, checkedAt: new Date().toISOString(), lastSuccessAt, lastError: null, nextRetryAt: null });
     if (forever || i + 1 < iterations) await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown strategy runner error";
+      const nextRetryAt = forever ? new Date(Date.now() + intervalSeconds * 1000).toISOString() : null;
+      await persistPaperStrategyRunnerStatus(statusPath, { state: forever ? "retrying" : "stopped", poolAddress, checkedAt: new Date().toISOString(), lastSuccessAt, lastError: errorMessage, nextRetryAt });
       console.error(JSON.stringify({
         event: "paper_strategy_iteration_failed",
         iteration: i + 1,
         retrying: forever,
-        error: error instanceof Error ? error.message : "Unknown strategy runner error",
+        error: errorMessage,
         at: new Date().toISOString()
       }));
       if (!forever) throw error;
