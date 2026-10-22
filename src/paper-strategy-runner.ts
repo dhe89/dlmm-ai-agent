@@ -17,7 +17,7 @@ function positiveInt(name: string, fallback: number): number {
 function average(values: readonly number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
-function signal(snapshots: readonly MarketSnapshot[], fastWindow: number, slowWindow: number): {
+export function calculatePaperStrategySignal(snapshots: readonly MarketSnapshot[], fastWindow: number, slowWindow: number): {
   signal: "LONG" | "CASH" | "WARMING_UP";
   fastAverage: number | null;
   slowAverage: number | null;
@@ -66,7 +66,7 @@ async function main(): Promise<void> {
     } catch (error) {
       if (!(error instanceof Error && error.message.includes("no snapshot records"))) throw error;
     }
-    const resultSignal = signal(history, fastWindow, slowWindow);
+    const resultSignal = calculatePaperStrategySignal(history, fastWindow, slowWindow);
     const report = {
       reportType: "read-only-paper-strategy-signal",
       mode: "signal-only-no-execution",
@@ -77,6 +77,7 @@ async function main(): Promise<void> {
       ...resultSignal,
       warning: "Pair-price SMA crossover proxy only; LONG/CASH is a research signal, not an LP valuation or instruction to execute a transaction."
     };
+    await mkdir(dirname(signalPath), { recursive: true });
     await appendFile(signalPath, JSON.stringify(report) + "\n", "utf8");
     console.log(JSON.stringify(report));
     if (i + 1 < iterations) await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
