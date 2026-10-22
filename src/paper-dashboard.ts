@@ -109,17 +109,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); res.end(page); return;
     }
     if (req.method === "GET" && url.pathname === "/api/health") {
-      try {
-        await store.load();
-        json(res, 200, { status: "ok", mode: "paper-only", persistence: "ok" });
-      } catch (error) {
-        json(res, 503, {
-          status: "unhealthy",
-          mode: "paper-only",
-          persistence: "error",
-          error: error instanceof Error ? error.message : "paper state could not be loaded"
-        });
-      }
+      const health = await getPaperDashboardHealth(store);
+      json(res, health.statusCode, health.payload);
       return;
     }
     if (req.method === "GET" && url.pathname === "/api/portfolio") {
@@ -177,4 +168,28 @@ export function startPaperDashboard(options: { host?: string; port?: number } = 
 }
 if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1].replace(/\\\\/g, "/")) {
   startPaperDashboard();
+}
+
+
+export type PaperDashboardHealth = {
+  statusCode: 200 | 503;
+  payload: { status: "ok" | "unhealthy"; mode: "paper-only"; persistence: "ok" | "error"; error?: string };
+};
+
+/** Read-only health probe. A missing ledger is healthy for a new paper-only instance. */
+export async function getPaperDashboardHealth(ledgerStore: PaperLedgerStore): Promise<PaperDashboardHealth> {
+  try {
+    await ledgerStore.load();
+    return { statusCode: 200, payload: { status: "ok", mode: "paper-only", persistence: "ok" } };
+  } catch (error) {
+    return {
+      statusCode: 503,
+      payload: {
+        status: "unhealthy",
+        mode: "paper-only",
+        persistence: "error",
+        error: error instanceof Error ? error.message : "paper state could not be loaded"
+      }
+    };
+  }
 }
