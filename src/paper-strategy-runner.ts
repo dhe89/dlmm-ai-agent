@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { MeteoraPoolCollector } from "./collectors/meteora.js";
 import type { MarketSnapshot } from "./domain.js";
 import { parseHistoricalSnapshots } from "./historical-backtest.js";
+import { buildPaperSignalJournalEntry, type PaperSignal } from "./strategy-signal-journal.js";
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -76,6 +77,22 @@ async function main(): Promise<void> {
       if (!(error instanceof Error && error.message.includes("no snapshot records"))) throw error;
     }
     const resultSignal = calculatePaperStrategySignal(history, fastWindow, slowWindow);
+    let previousSignal: PaperSignal | null = null;
+    try {
+      const priorLines = (await readFile(signalPath, "utf8")).split("\\n").filter(Boolean);
+      for (let lineIndex = priorLines.length - 1; lineIndex >= 0; lineIndex -= 1) {
+        try {
+          const prior = JSON.parse(priorLines[lineIndex]!) as { poolAddress?: unknown; signal?: unknown };
+          if (prior.poolAddress === poolAddress && (prior.signal === "LONG" || prior.signal === "CASH" || prior.signal === "WARMING_UP")) {
+            previousSignal = prior.signal;
+            break;
+          }
+        } catch { /* Ignore malformed historical journal lines; new record remains explicit. */ }
+      }
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+    }
+    const transition = buildPaperSignalJournalEntry({ poolAddress, capturedAt: snapshot.capturedAt, fastWindow, slowWindow, decision: resultSignal, previousSignal });
     const report = {
       reportType: "read-only-paper-strategy-signal",
       mode: "signal-only-no-execution",
@@ -84,6 +101,9 @@ async function main(): Promise<void> {
       capturedAt: snapshot.capturedAt,
       config: { fastWindow, slowWindow, intervalSeconds },
       ...resultSignal,
+      previousSignal: transition.previousSignal,
+      signalChanged: transition.changed,
+      transition: transition.transition,
       warning: "Pair-price SMA crossover proxy only; LONG/CASH is a research signal, not an LP valuation or instruction to execute a transaction."
     };
     await mkdir(dirname(signalPath), { recursive: true });
