@@ -267,6 +267,17 @@ export class PaperLedger {
     if (![state.startingCapitalUsd, state.cashBalanceUsd, openValue].every(Number.isFinite)) {
       throw new Error("Paper ledger state contains non-finite accounting values");
     }
+    // Ensure the durable event journal is a faithful source of truth, not merely valid JSON.
+    const replayed = PaperLedger.replay(state.startingCapitalUsd, state.events);
+    const normalizePositions = (positions: PaperLedgerPosition[]) => positions
+      .map((position) => ({ ...position }))
+      .sort((a, b) => a.id.localeCompare(b.id));
+    if (JSON.stringify(normalizePositions(replayed.getPositions())) !== JSON.stringify(normalizePositions(ledger.getPositions()))) {
+      throw new Error("Paper ledger state positions do not match event journal");
+    }
+    if (Math.abs(replayed.summary().cashUsd - state.cashBalanceUsd) > 0.000001) {
+      throw new Error("Paper ledger state cash does not match event journal");
+    }
     // Restore the validated cash balance as well as the positions and events.
     ledger.cashBalanceUsd = state.cashBalanceUsd;
     return ledger;
