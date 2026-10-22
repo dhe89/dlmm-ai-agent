@@ -144,9 +144,8 @@ async function main(): Promise<void> {
           const prior = JSON.parse(priorLines[lineIndex]!) as { poolAddress?: unknown; capturedAt?: unknown; signal?: unknown };
           if (prior.poolAddress !== poolAddress) continue;
           if (prior.capturedAt === snapshot.capturedAt) signalAlreadyRecorded = true;
-          if (prior.signal === "LONG" || prior.signal === "CASH" || prior.signal === "WARMING_UP") {
+          if (previousSignal === null && (prior.signal === "LONG" || prior.signal === "CASH" || prior.signal === "WARMING_UP")) {
             previousSignal = prior.signal;
-            break;
           }
         } catch { /* Ignore malformed historical journal lines; new record remains explicit. */ }
       }
