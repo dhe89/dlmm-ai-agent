@@ -33,7 +33,7 @@ export async function persistPaperStrategyRunnerStatus(path: string, status: Pap
   await mkdir(dirname(target), { recursive: true });
   const temporary = `${target}.${process.pid}.tmp`;
   try {
-    await writeFile(temporary, JSON.stringify(status, null, 2) + "\\n", { encoding: "utf8", flag: "w" });
+    await writeFile(temporary, JSON.stringify(status, null, 2) + "\n", { encoding: "utf8", flag: "w" });
     await rename(temporary, target);
   } catch (error) {
     const { rm } = await import("node:fs/promises");
