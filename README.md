@@ -116,6 +116,23 @@ npm run paper:portfolio -- --action=history
 
 Use `--state=path/to/portfolio.json` to select a different local state file. All amounts are illustrative USD notional values. Marks must be entered explicitly and are not inferred from the pool pair price. This CLI is a first usable paper-ledger step, not an automated strategy runner or a DLMM LP PnL engine.
 
+## Run the mobile-friendly paper portfolio dashboard
+
+Start the local dashboard:
+
+```bash
+npm run paper:dashboard
+```
+
+Then open `http://127.0.0.1:8787` in a browser on the same computer. It displays paper cash, equity, realized/unrealized PnL, open positions, and recent event history. The **Fetch market data** button requests current read-only Meteora pool discovery data; it does not use pair prices to mark LP positions or produce automatic trading signals. Position open/mark/close actions remain virtual and persist to `data/local/paper-portfolio.json`.
+
+Configuration:
+- `PAPER_DASHBOARD_HOST` defaults to `127.0.0.1` (local machine only).
+- `PAPER_DASHBOARD_PORT` defaults to `8787`.
+- `PAPER_STATE_PATH` defaults to `data/local/paper-portfolio.json`.
+
+For security, keep the dashboard bound to localhost. It currently has no authentication and should not be exposed directly to the public internet. On a phone, access it after the app is hosted on a secured environment or use a trusted private network with appropriate protections. This is a manual paper portfolio dashboard, not yet an automated strategy runner or validated DLMM LP valuation engine.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
