@@ -26,6 +26,8 @@
 - [x] Track cash, open position value, equity, realized PnL, and unrealized PnL separately.
 - [x] Test accounting invariants, overspending, duplicate IDs, timestamp order, and closed positions.
 - [x] Add atomic JSON snapshot persistence and state restoration.
+- [x] Serialize concurrent paper-portfolio mutations across service instances in one process to prevent lost updates.
+- [x] Use unique temporary filenames for atomic snapshot replacement.
 - [x] Test restart recovery, closed-position accounting, missing files, and corrupted snapshots.
 - [x] Add durable append-only JSONL event journal with strict validation and incomplete-record detection.
 - [x] Add deterministic replay with checks against prior values, position transitions, and realized PnL.
@@ -52,9 +54,6 @@
 - [x] Make persisted snapshot retries idempotent only when timestamp and all snapshot fields match; reject conflicting timestamp collisions.
 - [x] Prevent duplicate signal journal entries when a retry reprocesses an already-recorded pool/timestamp.
 - [x] Persist machine-readable runner status atomically, including last successful snapshot, last error, and scheduled retry time; preserve recent status across restarts.
-- [x] Make persisted snapshot retries idempotent only when timestamp and all snapshot fields match; reject conflicting timestamp collisions.
-- [x] Prevent duplicate signal journal entries when a retry reprocesses an already-recorded pool/timestamp.
-- [x] Persist machine-readable runner status atomically, including last successful snapshot, last error, and scheduled retry time.
 - [ ] Run strategies on live data without execution in a long-running monitored shadow deployment.
 - [x] Compare the SMA proxy against a passive buy-and-hold pair-price benchmark, including excess return.
 - [x] Add a fail-closed JSONL historical snapshot loader and reproducible CLI report.
