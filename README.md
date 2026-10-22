@@ -153,6 +153,25 @@ Snapshots append to `data/local/strategy-snapshots.jsonl`; signal reports append
 
 The signal journal also records the previous signal, whether the signal changed, and a transition label (`INITIAL`, `UNCHANGED`, or for example `CASH->LONG`). This makes it easier to review actual strategy state changes instead of treating every repeated poll as a new decision. It remains a research-only journal and does not trigger position changes.
 
+## Paper signal evaluation and dashboard access
+
+The codebase includes a testable forward-outcome evaluator in `src/paper-signal-evaluation.ts`. It compares recorded LONG/CASH labels with later observed pair prices and reports forward-return statistics plus matched-window strategy/benchmark diagnostics. It deliberately does not claim compounded live performance, and overlapping forward windows are not independent trades. Treat results as exploratory only; use chronological holdout data before drawing conclusions.
+
+### Dashboard binding and authentication
+
+By default, the dashboard binds to `127.0.0.1:8787` and is only reachable from the same computer. A non-loopback binding now requires both `PAPER_DASHBOARD_USERNAME` and `PAPER_DASHBOARD_PASSWORD`, which enables HTTP Basic Authentication.
+
+Example environment configuration:
+
+```bash
+PAPER_DASHBOARD_HOST=0.0.0.0
+PAPER_DASHBOARD_PORT=8787
+PAPER_DASHBOARD_USERNAME=choose-a-user
+PAPER_DASHBOARD_PASSWORD=use-a-long-unique-secret
+```
+
+Basic Authentication does not encrypt traffic. Do not expose this server directly to the public internet. For phone access, prefer a trusted private network or VPN and put the dashboard behind HTTPS; never commit credentials to Git or share them in logs. The dashboard remains paper-only.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
