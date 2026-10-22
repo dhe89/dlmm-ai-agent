@@ -27,6 +27,25 @@ describe("paper strategy runner status persistence", () => {
     await expect(readFile(path, "utf8").then(JSON.parse)).resolves.toEqual(status);
   });
 
+  it("safely handles concurrent status replacements without temporary-file collisions", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "paper-runner-status-"));
+    directories.push(directory);
+    const path = join(directory, "status.json");
+    const base: PaperStrategyRunnerStatus = {
+      state: "healthy", poolAddress: "pool-A", checkedAt: "2026-10-22T10:00:00.000Z",
+      lastSuccessAt: "2026-10-22T10:00:00.000Z", lastError: null, nextRetryAt: null
+    };
+    const statuses = Array.from({ length: 8 }, (_, index) => ({
+      ...base,
+      poolAddress: `pool-${index}`,
+      checkedAt: new Date(Date.parse(base.checkedAt) + index * 1_000).toISOString()
+    }));
+    await expect(Promise.all(statuses.map((status) => persistPaperStrategyRunnerStatus(path, status))))
+      .resolves.toHaveLength(statuses.length);
+    const saved = JSON.parse(await readFile(path, "utf8")) as PaperStrategyRunnerStatus;
+    expect(statuses).toContainEqual(saved);
+  });
+
   it("replaces a previous status instead of leaving partial JSON", async () => {
     const directory = await mkdtemp(join(tmpdir(), "paper-runner-status-"));
     directories.push(directory);
