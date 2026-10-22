@@ -157,6 +157,8 @@ The signal journal also records the previous signal, whether the signal changed,
 
 The codebase includes a testable forward-outcome evaluator in `src/paper-signal-evaluation.ts`. It compares recorded LONG/CASH labels with later observed pair prices and reports forward-return statistics plus matched-window strategy/benchmark diagnostics. It deliberately does not claim compounded live performance, and overlapping forward windows are not independent trades. Treat results as exploratory only; use chronological holdout data before drawing conclusions.
 
+The dashboard API supports a validated valuation mark at `POST /api/portfolio/mark-valuation` with JSON `{"id":"position-id","valuation":{...ValuationResult}}`. The supplied valuation must include fresh evidence and internally consistent inventory/fee/cost/PnL components; stale or incomplete valuations are rejected. This endpoint is an integration point only: the project does not yet automatically fetch authoritative position-specific bin inventory, accrued fees, or token USD prices from a complete DLMM position data source. Do not fabricate these values or use the pool pair price as a substitute.
+
 ### Dashboard binding and authentication
 
 By default, the dashboard binds to `127.0.0.1:8787` and is only reachable from the same computer. A non-loopback binding now requires both `PAPER_DASHBOARD_USERNAME` and `PAPER_DASHBOARD_PASSWORD`, which enables HTTP Basic Authentication.
