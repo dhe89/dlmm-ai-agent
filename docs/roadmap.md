@@ -48,6 +48,7 @@
 - [x] Add a deterministic, cost-aware pair-price SMA shadow backtest with no same-bar look-ahead.
 - [ ] Validate strategies against a sufficiently long historical data set.
 - [x] Add a foreground read-only strategy signal runner that records repeated pair-price snapshots and SMA research signals without execution.
+- [x] Add an opt-in continuous runner mode that logs per-iteration failures and retries after a bounded configured interval without emitting a signal for failed iterations.
 - [ ] Run strategies on live data without execution in a long-running monitored shadow deployment.
 - [x] Compare the SMA proxy against a passive buy-and-hold pair-price benchmark, including excess return.
 - [x] Add a fail-closed JSONL historical snapshot loader and reproducible CLI report.
