@@ -54,6 +54,7 @@
 - [x] Make persisted snapshot retries idempotent only when timestamp and all snapshot fields match; reject conflicting timestamp collisions.
 - [x] Prevent duplicate signal journal entries when a retry reprocesses an already-recorded pool/timestamp.
 - [x] Persist machine-readable runner status atomically, including last successful snapshot, last error, and scheduled retry time; preserve recent status across restarts.
+- [x] Use unique temporary filenames for runner status writes and test concurrent replacements.
 - [x] Expose a dashboard runner-health endpoint that validates status files and flags stale, retrying, stopped, or malformed runner state.
 - [ ] Run strategies on live data without execution in a long-running monitored shadow deployment.
 - [x] Compare the SMA proxy against a passive buy-and-hold pair-price benchmark, including excess return.
