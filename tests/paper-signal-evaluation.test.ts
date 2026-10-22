@@ -18,7 +18,7 @@ describe("evaluatePaperSignals", () => {
     ], { forwardSteps: 1, costBpsPerSide: 10 });
     expect(result).toMatchObject({ observations: 5, evaluatedSignals: 2, longSignals: 1, cashSignals: 1 });
     expect(result.forwardReturnsPct[0]).toBeCloseTo(10);
-    expect(result.forwardReturnsPct[1]).toBeCloseTo(-100 / 110 * 100);
+    expect(result.forwardReturnsPct[1]).toBeCloseTo((105 / 110 - 1) * 100);
   });
 
   it("rejects invalid prices, duplicate timestamps, and invalid costs", () => {
