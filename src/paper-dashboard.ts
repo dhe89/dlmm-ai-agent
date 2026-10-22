@@ -127,6 +127,13 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       let result: unknown;
       if (action === "open") result = await portfolio.open({ id: stringField(input,"id"), pool: stringField(input,"pool"), capital: numberField(input,"capital"), entryPrice: numberField(input,"entryPrice"), at });
       else if (action === "mark") result = await portfolio.mark({ id: stringField(input,"id"), value: numberField(input,"value"), at });
+      else if (action === "mark-valuation") {
+        const valuation = input.valuation;
+        if (typeof valuation !== "object" || valuation === null || Array.isArray(valuation)) throw new Error("valuation must be an object");
+        const record = valuation as Record<string, unknown>;
+        if (typeof record.evidence !== "object" || record.evidence === null || Array.isArray(record.evidence)) throw new Error("valuation.evidence must be an object");
+        result = await portfolio.markFromValuation({ id: stringField(input, "id"), valuation: valuation as import("./valuation.js").ValuationResult });
+      }
       else if (action === "close") result = await portfolio.close({ id: stringField(input,"id"), value: numberField(input,"value"), at });
       else throw new Error("unsupported portfolio action");
       json(res, 200, { success: true, result }); return;
