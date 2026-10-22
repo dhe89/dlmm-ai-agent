@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: starter
     region: singapore
-    buildCommand: npm ci && npm run build
+    buildCommand: npm install --no-audit --no-fund && npm run build
     startCommand: node dist/paper-dashboard.js
     healthCheckPath: /api/health
     disk:
