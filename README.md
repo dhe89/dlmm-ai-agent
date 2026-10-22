@@ -126,6 +126,8 @@ npm run paper:dashboard
 
 Then open `http://127.0.0.1:8787` in a browser on the same computer. It displays paper cash, equity, realized/unrealized PnL, open positions, and recent event history. The **Fetch market data** button requests current read-only Meteora pool discovery data; it does not use pair prices to mark LP positions or produce automatic trading signals. Position open/mark/close actions remain virtual and persist to `data/local/paper-portfolio.json`.
 
+The dashboard exposes `GET /api/health` for monitoring. It verifies that the persisted paper ledger can be loaded: healthy state returns HTTP 200 with `persistence: "ok"`; an unreadable or corrupted state returns HTTP 503. This is a lightweight persistence check, not a full external-data or strategy-health guarantee.
+
 Configuration:
 - `PAPER_DASHBOARD_HOST` defaults to `127.0.0.1` (local machine only).
 - `PAPER_DASHBOARD_PORT` defaults to `8787`.
