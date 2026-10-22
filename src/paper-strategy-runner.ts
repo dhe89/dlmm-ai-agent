@@ -58,6 +58,17 @@ export function calculatePaperStrategySignal(snapshots: readonly MarketSnapshot[
   return { signal: fastAverage > slowAverage ? "LONG" : "CASH", fastAverage, slowAverage, observations: prices.length };
 }
 
+export function validateStrategyHistoryCandidate(
+  history: readonly MarketSnapshot[],
+  snapshot: MarketSnapshot,
+  fastWindow: number,
+  slowWindow: number
+): { history: MarketSnapshot[]; decision: ReturnType<typeof calculatePaperStrategySignal> } {
+  const candidateHistory = [...history, snapshot];
+  const decision = calculatePaperStrategySignal(candidateHistory, fastWindow, slowWindow);
+  return { history: candidateHistory, decision };
+}
+
 async function main(): Promise<void> {
   const poolAddress = option("pool");
   if (!poolAddress?.trim()) throw new Error("required option: --pool=POOL_ADDRESS");
@@ -92,8 +103,8 @@ async function main(): Promise<void> {
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     }
-    const candidateHistory = [...history, snapshot];
-    const resultSignal = calculatePaperStrategySignal(candidateHistory, fastWindow, slowWindow);
+    const candidate = validateStrategyHistoryCandidate(history, snapshot, fastWindow, slowWindow);
+    const resultSignal = candidate.decision;
     await mkdir(dirname(historyPath), { recursive: true });
     await appendFile(historyPath, JSON.stringify(snapshot) + "\n", "utf8");
     let previousSignal: PaperSignal | null = null;
