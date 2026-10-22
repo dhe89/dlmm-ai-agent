@@ -63,7 +63,7 @@ describe("calculatePaperStrategySignal", () => {
 
   it("returns the validated candidate history and decision together", () => {
     const history = snapshots([1, 2]);
-    const candidate = snapshots([3])[0]!;
+    const candidate = { ...snapshots([3])[0]!, capturedAt: new Date(Date.UTC(2026, 0, 1, 0, 2)).toISOString() };
     expect(validateStrategyHistoryCandidate(history, candidate, 1, 3)).toEqual({
       history: [...history, candidate],
       decision: { signal: "LONG", fastAverage: 3, slowAverage: 2, observations: 3 }
