@@ -30,7 +30,10 @@ describe("calculatePaperStrategySignal", () => {
   });
 
   it("rejects invalid windows and invalid pair prices", () => {
+    expect(() => calculatePaperStrategySignal(snapshots([1, 2, 3]), 0, 2)).toThrow(/positive integer/);
     expect(() => calculatePaperStrategySignal(snapshots([1, 2, 3]), 3, 3)).toThrow(/smaller than/);
     expect(() => calculatePaperStrategySignal(snapshots([1, -2, 3]), 1, 2)).toThrow(/invalid pair prices/);
+    const duplicateTimes = snapshots([1, 2, 3]).map((item, index) => ({ ...item, capturedAt: index === 2 ? item.capturedAt : "2026-01-01T00:00:00.000Z" }));
+    expect(() => calculatePaperStrategySignal(duplicateTimes, 1, 2)).toThrow(/timestamps must be unique/);
   });
 });
