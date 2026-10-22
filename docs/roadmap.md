@@ -24,6 +24,7 @@
 - [x] Add deterministic ledger transitions for opening, marking, and closing virtual positions.
 - [x] Expose persistent paper portfolio status/history through a CLI and mobile-friendly local dashboard.
 - [x] Require JSON content type for dashboard portfolio mutations and test rejection of simple form/text requests.
+- [x] Return HTTP 503 for persisted-state and market-data service failures instead of reporting them as client validation errors.
 - [x] Track cash, open position value, equity, realized PnL, and unrealized PnL separately.
 - [x] Test accounting invariants, overspending, duplicate IDs, timestamp order, and closed positions.
 - [x] Add atomic JSON snapshot persistence and state restoration.
