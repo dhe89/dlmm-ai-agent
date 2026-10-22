@@ -23,9 +23,18 @@ export function calculatePaperStrategySignal(snapshots: readonly MarketSnapshot[
   slowAverage: number | null;
   observations: number;
 } {
+  if (!Number.isInteger(fastWindow) || fastWindow < 1) throw new Error("--fast-window must be a positive integer");
+  if (!Number.isInteger(slowWindow) || slowWindow < 2) throw new Error("--slow-window must be an integer greater than one");
   if (fastWindow >= slowWindow) throw new Error("--fast-window must be smaller than --slow-window");
   if (snapshots.length < slowWindow) return { signal: "WARMING_UP", fastAverage: null, slowAverage: null, observations: snapshots.length };
   const ordered = [...snapshots].sort((a,b)=>Date.parse(a.capturedAt)-Date.parse(b.capturedAt));
+  let previousTime = Number.NEGATIVE_INFINITY;
+  for (const snapshot of ordered) {
+    const timestamp = Date.parse(snapshot.capturedAt);
+    if (!Number.isFinite(timestamp)) throw new Error("history contains invalid timestamps");
+    if (timestamp <= previousTime) throw new Error("history timestamps must be unique");
+    previousTime = timestamp;
+  }
   const prices = ordered.map(x=>x.currentPrice);
   if (prices.some(x=>!Number.isFinite(x)||x<=0)) throw new Error("history contains invalid pair prices");
   const fastAverage = average(prices.slice(-fastWindow));
