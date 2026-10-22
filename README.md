@@ -12,7 +12,8 @@ An experimental agent for researching Meteora DLMM strategies, starting with rea
 - [x] Store timestamped market snapshots with stale-data checks
 - [x] Paper execution and position/event ledger
 - [ ] Bin-level position and fee valuation model
-- [x] Add a deterministic pair-price shadow backtest proxy with modeled costs and drawdown metrics\n- [ ] DLMM-specific strategy evaluation with authoritative position inventory and accrued fees
+- [x] Add a deterministic pair-price shadow backtest proxy with modeled costs and drawdown metrics
+- [ ] DLMM-specific strategy evaluation with authoritative position inventory and accrued fees
 
 ## Principles
 
@@ -62,7 +63,13 @@ npm run validate:walk-forward -- --input=data/local/meteora-pools.jsonl --fast-w
 
 This selects SMA parameters from each fold's preceding history, then tests SMA and EMA on the next unseen segment using the same selected window pair and costs. Each test fold starts cold and resets notional; reported compounded returns combine independent test periods rather than simulating one continuously held portfolio. Every test segment must contain more observations than the selected slow window. The results remain pair-price proxies, not DLMM LP PnL. The JSON report includes a SHA-256 fingerprint of the exact input file and data-quality metadata (pool, observation count, date range, and minimum/median/maximum snapshot interval) so experiments can be reproduced and irregular sampling can be spotted. It flags snapshot cadence when the largest interval exceeds three times the median, the smallest interval is below one-third of the median, or the data has only one observation; these are heuristic warnings, not proof that the series is a regular candle feed. It reports positive-return fold frequency for both strategies, the number of distinct selected SMA parameter sets, parameter stability, and aggregate SMA-versus-EMA return differences.
 
-The sweep module is available to import from `src/strategy-sweep.ts`. For a chronological holdout evaluation, use the CLI below. It chooses SMA windows using only the earlier training segment and evaluates both SMA and EMA on the later untouched holdout segment with the same selected windows and costs; both holdout runs start cold, so the segment needs enough observations for the slow window and signal warm-up.\n\n```bash\nnpm run validate:holdout -- --input=data/local/meteora-pools.jsonl --fast-windows=3,5,8 --slow-windows=10,15,20 --train-fraction=0.7 --cost-bps=30 --capital-usd=1000\n```\n\nDefaults are fast windows 3/5/8, slow windows 10/15/20, 70% training data, 30 bps per side, and $1,000 starting notional. The output reports training and holdout periods separately. This is a single holdout check; a single holdout is noisy and does not establish future profitability or DLMM LP PnL. For repeated expanding-window validation, use the walk-forward command below.
+The sweep module is available to import from `src/strategy-sweep.ts`. For a chronological holdout evaluation, use the CLI below. It chooses SMA windows using only the earlier training segment and evaluates both SMA and EMA on the later untouched holdout segment with the same selected windows and costs; both holdout runs start cold, so the segment needs enough observations for the slow window and signal warm-up.
+
+```bash
+npm run validate:holdout -- --input=data/local/meteora-pools.jsonl --fast-windows=3,5,8 --slow-windows=10,15,20 --train-fraction=0.7 --cost-bps=30 --capital-usd=1000
+```
+
+Defaults are fast windows 3/5/8, slow windows 10/15/20, 70% training data, 30 bps per side, and $1,000 starting notional. The output reports training and holdout periods separately. This is a single holdout check; a single holdout is noisy and does not establish future profitability or DLMM LP PnL. For repeated expanding-window validation, use the walk-forward command below.
 
 ## Compare SMA and EMA strategies
 
