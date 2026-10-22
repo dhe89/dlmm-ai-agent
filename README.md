@@ -218,6 +218,10 @@ The dashboard's JSON state is stored locally at `data/local/paper-portfolio.json
 
 This is a private-network setup, not a production hosting deployment. Do not forward router ports, expose the dashboard directly to the public internet, or use plain HTTP Basic Authentication over an untrusted network. No actual wallet or on-chain signing is involved.
 
+### Hosted deployment caveat
+
+The included `render.yaml` is configured for a paid Render Starter web service with a persistent disk mounted at `/var/data`; it is **not a free-tier deployment**. That persistent disk is intentional because the paper ledger contains state that must survive restarts and redeployments. Do not switch this service to an ephemeral free instance for an important paper portfolio unless you accept that state may be lost and have an independently tested backup/restore process. The configuration has not been deployed or runtime-tested against a hosted service.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
