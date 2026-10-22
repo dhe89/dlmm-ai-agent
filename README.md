@@ -196,6 +196,15 @@ The simplest first setup is to run the dashboard on your computer and reach it f
 
 The dashboard also exposes `GET /api/runner-health`, which reads the strategy runner status file and classifies it as `ok`, `stale`, `retrying`, `stopped`, `unhealthy`, or `not-configured`. The default status path is `data/local/strategy-runner-status.json`; set `PAPER_RUNNER_STATUS_PATH` if the runner writes elsewhere. The endpoint returns HTTP 503 for stale, retrying, stopped, or unhealthy states. A status is considered stale after five minutes without an updated check. The endpoint is diagnostic only and does not restart the runner or prove that market data is currently available.
 
+You can make a validated backup or restore a snapshot using the `paper:backup` command. It validates the source ledger before writing the destination atomically:
+
+```bash
+npm run paper:backup -- --source=data/local/paper-portfolio.json --destination=backups/paper-portfolio.json
+npm run paper:backup -- --source=backups/paper-portfolio.json --destination=data/local/paper-portfolio.json
+```
+
+Use distinct source and destination paths. Keep backup files private, outside the public repository, and preferably on separate persistent storage. This utility copies a single validated snapshot; it does not synchronize concurrent writes or replace an external database.
+
 The dashboard's JSON state is stored locally at `data/local/paper-portfolio.json` by default; keep regular backups and do not commit local state. To stop private access, use `tailscale serve off`. Check `tailscale serve status` to confirm it is disabled. See the official [Tailscale Serve documentation](https://tailscale.com/docs/features/tailscale-serve) for current commands and HTTPS setup.
 
 This is a private-network setup, not a production hosting deployment. Do not forward router ports, expose the dashboard directly to the public internet, or use plain HTTP Basic Authentication over an untrusted network. No actual wallet or on-chain signing is involved.
