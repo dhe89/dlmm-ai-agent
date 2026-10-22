@@ -36,4 +36,21 @@ describe("calculatePaperStrategySignal", () => {
     const duplicateTimes = snapshots([1, 2, 3]).map((item, index) => ({ ...item, capturedAt: index === 2 ? item.capturedAt : "2026-01-01T00:00:00.000Z" }));
     expect(() => calculatePaperStrategySignal(duplicateTimes, 1, 2)).toThrow(/timestamps must be unique/);
   });
+
+  it("validates incomplete warm-up history instead of masking bad data", () => {
+    expect(() => calculatePaperStrategySignal(snapshots([-1]), 1, 3)).toThrow(/invalid pair prices/);
+    expect(() => calculatePaperStrategySignal([{ ...snapshots([1])[0]!, capturedAt: "not-a-date" }], 1, 3)).toThrow(/invalid timestamps/);
+  });
+
+  it("rejects mixed-pool history so unrelated prices cannot contaminate a signal", () => {
+    const mixed = snapshots([1, 2]).map((snapshot, index) => ({
+      ...snapshot,
+      poolAddress: index === 0 ? "pool-A" : "pool-B"
+    }));
+    expect(() => calculatePaperStrategySignal(mixed, 1, 3)).toThrow(/exactly one pool/);
+  });
+
+  it("rejects empty pool identifiers", () => {
+    expect(() => calculatePaperStrategySignal([{ ...snapshots([1])[0]!, poolAddress: " " }], 1, 3)).toThrow(/empty pool address/);
+  });
 });
