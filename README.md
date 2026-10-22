@@ -194,6 +194,8 @@ The simplest first setup is to run the dashboard on your computer and reach it f
 4. On the computer, publish the local dashboard only to your tailnet using Tailscale Serve: `tailscale serve --bg http://127.0.0.1:8787`. Follow the current Tailscale CLI output to get the HTTPS tailnet URL.
 5. Open that HTTPS URL in the phone browser. Keep the computer awake and the dashboard process running while you use it.
 
+Dashboard API validation errors return HTTP 400; persisted portfolio state failures and market-data fetch failures return HTTP 503 so clients can distinguish bad requests from service problems.
+
 The dashboard also exposes `GET /api/runner-health`, which reads the strategy runner status file and classifies it as `ok`, `stale`, `retrying`, `stopped`, `unhealthy`, or `not-configured`. The default status path is `data/local/strategy-runner-status.json`; set `PAPER_RUNNER_STATUS_PATH` if the runner writes elsewhere. The endpoint returns HTTP 503 for stale, retrying, stopped, or unhealthy states. A status is considered stale after five minutes without an updated check. The endpoint is diagnostic only and does not restart the runner or prove that market data is currently available.
 
 You can make a validated backup or restore a snapshot using the `paper:backup` command. It validates the source ledger before writing the destination atomically:
