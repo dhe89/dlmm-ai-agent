@@ -4,6 +4,7 @@ import { MeteoraPoolCollector } from "./collectors/meteora.js";
 import type { MarketSnapshot } from "./domain.js";
 import { parseHistoricalSnapshots } from "./historical-backtest.js";
 import { buildPaperSignalJournalEntry, type PaperSignal } from "./strategy-signal-journal.js";
+import { calculatePaperStrategySignal } from "./paper-strategy-runner.js";
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -105,10 +106,24 @@ async function main(): Promise<void> {
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     }
-    const candidate = validateStrategyHistoryCandidate(history, snapshot, fastWindow, slowWindow);
+    // Treat an exact already-persisted observation as a recoverable retry only
+    // when every field matches. A timestamp collision with different data remains fatal.
+    const existing = history.find((item) => item.capturedAt === snapshot.capturedAt);
+    let candidate: ReturnType<typeof validateStrategyHistoryCandidate>;
+    if (existing) {
+      if (JSON.stringify(existing) !== JSON.stringify(snapshot)) {
+        throw new Error("snapshot timestamp already exists with different data");
+      }
+      candidate = {
+        history: history,
+        decision: calculatePaperStrategySignal(history, fastWindow, slowWindow)
+      };
+    } else {
+      candidate = validateStrategyHistoryCandidate(history, snapshot, fastWindow, slowWindow);
+      await mkdir(dirname(historyPath), { recursive: true });
+      await appendFile(historyPath, JSON.stringify(snapshot) + "\n", "utf8");
+    }
     const resultSignal = candidate.decision;
-    await mkdir(dirname(historyPath), { recursive: true });
-    await appendFile(historyPath, JSON.stringify(snapshot) + "\n", "utf8");
     let previousSignal: PaperSignal | null = null;
     try {
       const priorLines = (await readFile(signalPath, "utf8")).split("\n").filter(Boolean);
