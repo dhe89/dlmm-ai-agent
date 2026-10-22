@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { timingSafeEqual } from "node:crypto";
 import { resolve } from "node:path";
 import { PaperPortfolioService } from "./paper-portfolio-service.js";
 import { PaperLedgerStore } from "./paper-ledger-store.js";
@@ -7,6 +8,8 @@ import { MeteoraPoolCollector } from "./collectors/meteora.js";
 const statePath = resolve(process.env.PAPER_STATE_PATH ?? "data/local/paper-portfolio.json");
 const port = Number(process.env.PAPER_DASHBOARD_PORT ?? "8787");
 const host = process.env.PAPER_DASHBOARD_HOST ?? "127.0.0.1";
+const dashboardUsername = process.env.PAPER_DASHBOARD_USERNAME;
+const dashboardPassword = process.env.PAPER_DASHBOARD_PASSWORD;
 const store = new PaperLedgerStore(statePath);
 const portfolio = new PaperPortfolioService(store);
 const collector = new MeteoraPoolCollector();
@@ -79,9 +82,29 @@ $('#refresh').onclick=load;$('#market').onclick=async()=>{try{msg('Fetching read
 load();
 </script></body></html>`;
 
+function safeEqual(left: string, right: string): boolean {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+function authorized(req: IncomingMessage): boolean {
+  if (!dashboardUsername || !dashboardPassword) return true;
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Basic ")) return false;
+  let decoded: string;
+  try { decoded = Buffer.from(header.slice(6), "base64").toString("utf8"); } catch { return false; }
+  const separator = decoded.indexOf(":");
+  if (separator < 0) return false;
+  return safeEqual(decoded.slice(0, separator), dashboardUsername) && safeEqual(decoded.slice(separator + 1), dashboardPassword);
+}
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
   try {
+    if (!authorized(req)) {
+      res.writeHead(401, { "www-authenticate": 'Basic realm="DLMM Paper Dashboard", charset="UTF-8"', "cache-control": "no-store" });
+      res.end("Authentication required");
+      return;
+    }
     if (req.method === "GET" && url.pathname === "/") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); res.end(page); return;
     }
@@ -115,6 +138,13 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 }
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PAPER_DASHBOARD_PORT must be a valid TCP port");
+const loopbackHosts = new Set(["127.0.0.1", "::1", "localhost"]);
+if (!loopbackHosts.has(host) && (!dashboardUsername || !dashboardPassword)) {
+  throw new Error("Non-loopback dashboard binding requires PAPER_DASHBOARD_USERNAME and PAPER_DASHBOARD_PASSWORD");
+}
+if ((dashboardUsername && !dashboardPassword) || (!dashboardUsername && dashboardPassword)) {
+  throw new Error("Set both PAPER_DASHBOARD_USERNAME and PAPER_DASHBOARD_PASSWORD, or neither");
+}
 createServer((req, res) => { void handle(req, res); }).listen(port, host, () => {
   console.log(JSON.stringify({ status: "listening", host, port, mode: "paper-only", statePath, url: `http://${host}:${port}` }));
 });
