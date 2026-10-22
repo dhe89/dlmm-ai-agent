@@ -1,4 +1,5 @@
 import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { MeteoraPoolCollector } from "./collectors/meteora.js";
 import type { MarketSnapshot } from "./domain.js";
@@ -31,7 +32,7 @@ export interface PaperStrategyRunnerStatus {
 export async function persistPaperStrategyRunnerStatus(path: string, status: PaperStrategyRunnerStatus): Promise<void> {
   const target = resolve(path);
   await mkdir(dirname(target), { recursive: true });
-  const temporary = `${target}.${process.pid}.tmp`;
+  const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
   try {
     await writeFile(temporary, JSON.stringify(status, null, 2) + "\n", { encoding: "utf8", flag: "w" });
     await rename(temporary, target);
