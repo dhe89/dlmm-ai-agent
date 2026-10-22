@@ -79,7 +79,7 @@ async function main(): Promise<void> {
     const resultSignal = calculatePaperStrategySignal(history, fastWindow, slowWindow);
     let previousSignal: PaperSignal | null = null;
     try {
-      const priorLines = (await readFile(signalPath, "utf8")).split("\\n").filter(Boolean);
+      const priorLines = (await readFile(signalPath, "utf8")).split("\n").filter(Boolean);
       for (let lineIndex = priorLines.length - 1; lineIndex >= 0; lineIndex -= 1) {
         try {
           const prior = JSON.parse(priorLines[lineIndex]!) as { poolAddress?: unknown; signal?: unknown };
