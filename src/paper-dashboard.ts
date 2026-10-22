@@ -6,7 +6,7 @@ import { PaperLedgerStore } from "./paper-ledger-store.js";
 import { MeteoraPoolCollector } from "./collectors/meteora.js";
 
 const statePath = resolve(process.env.PAPER_STATE_PATH ?? "data/local/paper-portfolio.json");
-const port = Number(process.env.PAPER_DASHBOARD_PORT ?? "8787");
+const port = Number(process.env.PAPER_DASHBOARD_PORT ?? process.env.PORT ?? "8787");
 const host = process.env.PAPER_DASHBOARD_HOST ?? "127.0.0.1";
 const dashboardUsername = process.env.PAPER_DASHBOARD_USERNAME;
 const dashboardPassword = process.env.PAPER_DASHBOARD_PASSWORD;
