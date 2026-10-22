@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import { resolve } from "node:path";
-import { PaperPortfolioService } from "./paper-portfolio-service.js";
+import { PaperPortfolioPersistenceError, PaperPortfolioService } from "./paper-portfolio-service.js";
 import { PaperLedgerStore } from "./paper-ledger-store.js";
 import { MeteoraPoolCollector } from "./collectors/meteora.js";
 import { getPaperStrategyRunnerHealth } from "./paper-runner-health.js";
@@ -159,7 +159,11 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
     json(res, 404, { error: "not found" });
   } catch (error) {
-    json(res, 400, { error: error instanceof Error ? error.message : "request failed" });
+    const statusCode = error instanceof PaperPortfolioPersistenceError
+      || (req.method === "GET" && url.pathname === "/api/market")
+      ? 503
+      : 400;
+    json(res, statusCode, { error: error instanceof Error ? error.message : "request failed" });
   }
 }
 
