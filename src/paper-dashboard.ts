@@ -144,14 +144,24 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
 }
 
-if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PAPER_DASHBOARD_PORT must be a valid TCP port");
-const loopbackHosts = new Set(["127.0.0.1", "::1", "localhost"]);
-if (!loopbackHosts.has(host) && (!dashboardUsername || !dashboardPassword)) {
-  throw new Error("Non-loopback dashboard binding requires PAPER_DASHBOARD_USERNAME and PAPER_DASHBOARD_PASSWORD");
+export function startPaperDashboard(options: { host?: string; port?: number; statePath?: string } = {}) {
+  const dashboardHost = options.host ?? host;
+  const dashboardPort = options.port ?? port;
+  const dashboardStatePath = options.statePath ?? statePath;
+  if (!Number.isInteger(dashboardPort) || dashboardPort < 1 || dashboardPort > 65535) throw new Error("PAPER_DASHBOARD_PORT must be a valid TCP port");
+  const loopbackHosts = new Set(["127.0.0.1", "::1", "localhost"]);
+  if (!loopbackHosts.has(dashboardHost) && (!dashboardUsername || !dashboardPassword)) {
+    throw new Error("Non-loopback dashboard binding requires PAPER_DASHBOARD_USERNAME and PAPER_DASHBOARD_PASSWORD");
+  }
+  if ((dashboardUsername && !dashboardPassword) || (!dashboardUsername && dashboardPassword)) {
+    throw new Error("Set both PAPER_DASHBOARD_USERNAME and PAPER_DASHBOARD_PASSWORD, or neither");
+  }
+  const server = createServer((req, res) => { void handle(req, res); });
+  server.listen(dashboardPort, dashboardHost, () => {
+    console.log(JSON.stringify({ status: "listening", host: dashboardHost, port: dashboardPort, mode: "paper-only", statePath: dashboardStatePath, url: `http://${dashboardHost}:${dashboardPort}` }));
+  });
+  return server;
 }
-if ((dashboardUsername && !dashboardPassword) || (!dashboardUsername && dashboardPassword)) {
-  throw new Error("Set both PAPER_DASHBOARD_USERNAME and PAPER_DASHBOARD_PASSWORD, or neither");
+if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1].replace(/\\\\/g, "/")) {
+  startPaperDashboard();
 }
-createServer((req, res) => { void handle(req, res); }).listen(port, host, () => {
-  console.log(JSON.stringify({ status: "listening", host, port, mode: "paper-only", statePath, url: `http://${host}:${port}` }));
-});
