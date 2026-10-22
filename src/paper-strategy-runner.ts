@@ -129,6 +129,17 @@ async function main(): Promise<void> {
   const collector = new MeteoraPoolCollector();
 
   const forever = process.argv.slice(2).includes("--forever");
+  // Preserve the last known successful observation across process restarts.
+  try {
+    const previousStatus = JSON.parse(await readFile(statusPath, "utf8")) as { lastSuccessAt?: unknown };
+    if (typeof previousStatus.lastSuccessAt === "string" && Number.isFinite(Date.parse(previousStatus.lastSuccessAt))) {
+      lastSuccessAt = previousStatus.lastSuccessAt;
+    }
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
+      console.error(JSON.stringify({ event: "paper_strategy_status_restore_failed", error: error instanceof Error ? error.message : "Unknown status restore error" }));
+    }
+  }
   await persistPaperStrategyRunnerStatus(statusPath, { state: "running", poolAddress, checkedAt: new Date().toISOString(), lastSuccessAt, lastError: null, nextRetryAt: null });
   for (let i = 0; forever || i < iterations; i += 1) {
     try {
