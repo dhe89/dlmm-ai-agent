@@ -83,12 +83,19 @@ async function main(): Promise<void> {
       ...(pool.tvlUsd !== undefined ? { tvlUsd: pool.tvlUsd } : {}),
       ...(pool.volume24hUsd !== undefined ? { volume24hUsd: pool.volume24hUsd } : {})
     };
+    // Validate the candidate together with existing history before persisting it.
+    // A duplicate API timestamp or corrupted history must not poison the JSONL file.
+    let history: MarketSnapshot[] = [];
+    try {
+      history = parseHistoricalSnapshots(await readFile(historyPath, "utf8"))
+        .filter((item) => item.poolAddress === poolAddress);
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+    }
+    const candidateHistory = [...history, snapshot];
+    const resultSignal = calculatePaperStrategySignal(candidateHistory, fastWindow, slowWindow);
     await mkdir(dirname(historyPath), { recursive: true });
     await appendFile(historyPath, JSON.stringify(snapshot) + "\n", "utf8");
-
-    const history = parseHistoricalSnapshots(await readFile(historyPath, "utf8"))
-      .filter((item) => item.poolAddress === poolAddress);
-    const resultSignal = calculatePaperStrategySignal(history, fastWindow, slowWindow);
     let previousSignal: PaperSignal | null = null;
     try {
       const priorLines = (await readFile(signalPath, "utf8")).split("\n").filter(Boolean);
