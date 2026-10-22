@@ -20,7 +20,8 @@
     "compare:strategies": "npm run build && node dist/strategy-comparison-cli.js",
     "paper:portfolio": "npm run build && node dist/paper-portfolio-cli.js",
     "paper:dashboard": "npm run build && node dist/paper-dashboard.js",
-    "paper:strategy": "npm run build && node dist/paper-strategy-runner.js"
+    "paper:strategy": "npm run build && node dist/paper-strategy-runner.js",
+    "paper:backup": "npm run build && node dist/paper-ledger-backup.js"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
