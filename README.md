@@ -151,6 +151,8 @@ npm run paper:strategy -- --pool=POOL_ADDRESS --fast-window=5 --slow-window=20 -
 
 Snapshots append to `data/local/strategy-snapshots.jsonl`; signal reports append to `data/local/strategy-signals.jsonl`. Override paths with `--history=...` and `--signals=...`. Until there are at least `slow-window` observations the report says `WARMING_UP`. `LONG` and `CASH` are research labels from pair-price SMA only, not DLMM LP PnL, not a validated profitability claim, and not transaction instructions. This runner currently operates as a foreground process; it is not a hosted always-on service.
 
+The signal journal also records the previous signal, whether the signal changed, and a transition label (`INITIAL`, `UNCHANGED`, or for example `CASH->LONG`). This makes it easier to review actual strategy state changes instead of treating every repeated poll as a new decision. It remains a research-only journal and does not trigger position changes.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
