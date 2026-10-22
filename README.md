@@ -74,6 +74,48 @@ npm run compare:strategies -- --input=data/local/meteora-pools.jsonl --fast-wind
 
 The report compares SMA and EMA crossover proxies using the same fast/slow windows, modeled costs, and passive buy-and-hold benchmark. It includes input SHA-256 and snapshot interval quality metadata. This comparison is intentionally fixed-parameter rather than selecting a winner on the full data set; use the separate holdout or walk-forward commands for chronological validation. Both strategies use pair-price returns only, not DLMM LP inventory, accrued fees, bin changes, or position-level execution costs.
 
+## Inspect and manage a persistent paper portfolio
+
+A basic command-line paper portfolio is available. It persists virtual cash, positions, marks, and event history to a local JSON file (ignored by Git). This is a manual ledger interface; it does not yet generate trading signals, fetch live marks, or value actual DLMM LP inventory and fees.
+
+Initialize a $1,000 paper portfolio:
+
+```bash
+npm run paper:portfolio -- --action=init --initial-capital=1000
+```
+
+Show the portfolio summary and open positions:
+
+```bash
+npm run paper:portfolio
+```
+
+Open a virtual position (capital is allocated from paper cash):
+
+```bash
+npm run paper:portfolio -- --action=open --id=demo-1 --pool=POOL_ADDRESS --capital=100 --entry-price=1.25
+```
+
+Record a new manually supplied position value:
+
+```bash
+npm run paper:portfolio -- --action=mark --id=demo-1 --value=105
+```
+
+Close the virtual position at a manually supplied final value:
+
+```bash
+npm run paper:portfolio -- --action=close --id=demo-1 --value=103
+```
+
+View all open/closed positions and ledger events:
+
+```bash
+npm run paper:portfolio -- --action=history
+```
+
+Use `--state=path/to/portfolio.json` to select a different local state file. All amounts are illustrative USD notional values. Marks must be entered explicitly and are not inferred from the pool pair price. This CLI is a first usable paper-ledger step, not an automated strategy runner or a DLMM LP PnL engine.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
