@@ -133,6 +133,24 @@ Configuration:
 
 For security, keep the dashboard bound to localhost. It currently has no authentication and should not be exposed directly to the public internet. On a phone, access it after the app is hosted on a secured environment or use a trusted private network with appropriate protections. This is a manual paper portfolio dashboard, not yet an automated strategy runner or validated DLMM LP valuation engine.
 
+## Collect read-only paper strategy signals
+
+The experimental signal runner collects repeated current pair-price observations for one selected pool and records a simple SMA crossover research signal. It does not open, mark, or close paper positions automatically.
+
+Run one sample:
+
+```bash
+npm run paper:strategy -- --pool=POOL_ADDRESS --fast-window=5 --slow-window=20
+```
+
+Collect 100 samples one minute apart:
+
+```bash
+npm run paper:strategy -- --pool=POOL_ADDRESS --fast-window=5 --slow-window=20 --interval-seconds=60 --iterations=100
+```
+
+Snapshots append to `data/local/strategy-snapshots.jsonl`; signal reports append to `data/local/strategy-signals.jsonl`. Override paths with `--history=...` and `--signals=...`. Until there are at least `slow-window` observations the report says `WARMING_UP`. `LONG` and `CASH` are research labels from pair-price SMA only, not DLMM LP PnL, not a validated profitability claim, and not transaction instructions. This runner currently operates as a foreground process; it is not a hosted always-on service.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
