@@ -126,21 +126,23 @@ async function main(): Promise<void> {
   const signalPath = resolve(option("signals") ?? "data/local/strategy-signals.jsonl");
   const statusPath = resolve(option("status") ?? "data/local/strategy-runner-status.json");
   let lastSuccessAt: string | null = null;
+  let lastError: string | null = null;
   const collector = new MeteoraPoolCollector();
 
   const forever = process.argv.slice(2).includes("--forever");
   // Preserve the last known successful observation across process restarts.
   try {
-    const previousStatus = JSON.parse(await readFile(statusPath, "utf8")) as { lastSuccessAt?: unknown };
+    const previousStatus = JSON.parse(await readFile(statusPath, "utf8")) as { lastSuccessAt?: unknown; lastError?: unknown };
     if (typeof previousStatus.lastSuccessAt === "string" && Number.isFinite(Date.parse(previousStatus.lastSuccessAt))) {
       lastSuccessAt = previousStatus.lastSuccessAt;
     }
+    if (typeof previousStatus.lastError === "string") lastError = previousStatus.lastError;
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
       console.error(JSON.stringify({ event: "paper_strategy_status_restore_failed", error: error instanceof Error ? error.message : "Unknown status restore error" }));
     }
   }
-  await persistPaperStrategyRunnerStatus(statusPath, { state: "running", poolAddress, checkedAt: new Date().toISOString(), lastSuccessAt, lastError: null, nextRetryAt: null });
+  await persistPaperStrategyRunnerStatus(statusPath, { state: "running", poolAddress, checkedAt: new Date().toISOString(), lastSuccessAt, lastError, nextRetryAt: null });
   for (let i = 0; forever || i < iterations; i += 1) {
     try {
     const result = await collector.collectPools(1000);
@@ -209,10 +211,12 @@ async function main(): Promise<void> {
     }
     console.log(JSON.stringify({ ...report, signalAlreadyRecorded }));
     lastSuccessAt = snapshot.capturedAt;
-    await persistPaperStrategyRunnerStatus(statusPath, { state: "healthy", poolAddress, checkedAt: new Date().toISOString(), lastSuccessAt, lastError: null, nextRetryAt: null });
+    lastError = null;
+    await persistPaperStrategyRunnerStatus(statusPath, { state: "healthy", poolAddress, checkedAt: new Date().toISOString(), lastSuccessAt, lastError, nextRetryAt: null });
     if (forever || i + 1 < iterations) await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown strategy runner error";
+      lastError = errorMessage;
       const nextRetryAt = forever ? new Date(Date.now() + intervalSeconds * 1000).toISOString() : null;
       await persistPaperStrategyRunnerStatus(statusPath, { state: forever ? "retrying" : "stopped", poolAddress, checkedAt: new Date().toISOString(), lastSuccessAt, lastError: errorMessage, nextRetryAt });
       console.error(JSON.stringify({
