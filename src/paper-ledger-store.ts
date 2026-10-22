@@ -1,4 +1,5 @@
 import { readFile, rename, mkdir, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { PaperLedger, type PaperLedgerState } from "./paper-ledger.js";
 
@@ -13,7 +14,7 @@ export class PaperLedgerStore {
   async save(ledger: PaperLedger): Promise<void> {
     const directory = dirname(this.filePath);
     await mkdir(directory, { recursive: true });
-    const temporaryPath = `${this.filePath}.${process.pid}.tmp`;
+    const temporaryPath = `${this.filePath}.${process.pid}.${randomUUID()}.tmp`;
     const serialized = JSON.stringify(ledger.exportState(), null, 2) + "\n";
 
     try {
