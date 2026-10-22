@@ -74,6 +74,18 @@ describe("PaperLedgerStore", () => {
     expect(restored?.getEvents().filter((event) => event.type === "position_closed")).toHaveLength(1);
   });
 
+  it("rejects a valid-looking snapshot whose positions disagree with the event journal", async () => {
+    const store = await createStore();
+    const ledger = new PaperLedger(500);
+    ledger.openPosition({ id: "pos-1", poolAddress: "pool-A", openedAt, initialCapitalUsd: 200, entryPoolPrice: 2 });
+    await store.save(ledger);
+    const raw = JSON.parse(await readFile(store.filePath, "utf8")) as { positions: Array<{ currentValueUsd: number }> };
+    raw.positions[0]!.currentValueUsd = 275;
+    const { writeFile } = await import("node:fs/promises");
+    await writeFile(store.filePath, JSON.stringify(raw), "utf8");
+    await expect(store.load()).rejects.toThrow(/do not match event journal/);
+  });
+
   it("rejects corrupt JSON and snapshots that violate accounting invariants", async () => {
     const store = await createStore();
     await store.save(new PaperLedger(100));
