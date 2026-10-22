@@ -3,6 +3,13 @@ import { PaperLedgerStore } from "./paper-ledger-store.js";
 import { markLedgerFromValuation } from "./paper-valuation.js";
 import type { ValuationResult } from "./valuation.js";
 
+export class PaperPortfolioPersistenceError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "PaperPortfolioPersistenceError";
+  }
+}
+
 export interface PaperPortfolioReport {
   mode: "paper-only";
   summary: ReturnType<PaperLedger["summary"]> & { returnPct: number };
@@ -19,7 +26,9 @@ export class PaperPortfolioService {
     if (!Number.isFinite(initialCapitalUsd) || initialCapitalUsd <= 0) throw new Error("initialCapitalUsd must be greater than zero");
   }
   async report(): Promise<PaperPortfolioReport> {
-    const ledger = await this.store.load() ?? new PaperLedger(this.initialCapitalUsd);
+    let ledger: PaperLedger;
+    try { ledger = await this.store.load() ?? new PaperLedger(this.initialCapitalUsd); }
+    catch (error) { throw new PaperPortfolioPersistenceError("could not load paper portfolio state", { cause: error }); }
     const summary = ledger.summary();
     return {
       mode: "paper-only",
@@ -28,7 +37,9 @@ export class PaperPortfolioService {
     };
   }
   async history(): Promise<{ positions: ReturnType<PaperLedger["getPositions"]>; events: ReturnType<PaperLedger["getEvents"]> }> {
-    const ledger = await this.store.load() ?? new PaperLedger(this.initialCapitalUsd);
+    let ledger: PaperLedger;
+    try { ledger = await this.store.load() ?? new PaperLedger(this.initialCapitalUsd); }
+    catch (error) { throw new PaperPortfolioPersistenceError("could not load paper portfolio state", { cause: error }); }
     return { positions: ledger.getPositions(), events: ledger.getEvents() };
   }
   async open(input: { id: string; pool: string; capital: number; entryPrice: number; at?: string }) {
@@ -59,9 +70,12 @@ export class PaperPortfolioService {
 
     await previous;
     try {
-      const ledger = await this.store.load() ?? new PaperLedger(this.initialCapitalUsd);
+      let ledger: PaperLedger;
+      try { ledger = await this.store.load() ?? new PaperLedger(this.initialCapitalUsd); }
+      catch (error) { throw new PaperPortfolioPersistenceError("could not load paper portfolio state", { cause: error }); }
       const result = operation(ledger);
-      await this.store.save(ledger);
+      try { await this.store.save(ledger); }
+      catch (error) { throw new PaperPortfolioPersistenceError("could not save paper portfolio state", { cause: error }); }
       return result;
     } finally {
       release();
