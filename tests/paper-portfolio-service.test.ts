@@ -37,6 +37,27 @@ describe("PaperPortfolioService integration", () => {
     expect(history.events.map((event) => event.type)).toEqual(["position_opened", "position_marked", "position_closed"]);
   });
 
+  it("serializes concurrent mutations from separate service instances sharing one state file", async () => {
+    const { store, service } = await serviceFixture();
+    const secondService = new PaperPortfolioService(new PaperLedgerStore(store.filePath), 1_000);
+
+    await Promise.all([
+      service.open({ id: "concurrent-a", pool: "pool-A", capital: 200, entryPrice: 1, at: "2026-10-22T10:00:00.000Z" }),
+      secondService.open({ id: "concurrent-b", pool: "pool-B", capital: 300, entryPrice: 2, at: "2026-10-22T10:00:01.000Z" })
+    ]);
+
+    const restored = await store.load();
+    expect(restored?.summary()).toMatchObject({
+      cashUsd: 500,
+      equityUsd: 1_000,
+      openPositions: 2
+    });
+    expect(restored?.getPositions().map((position) => position.id).sort())
+      .toEqual(["concurrent-a", "concurrent-b"]);
+    expect(restored?.getEvents().map((event) => event.type))
+      .toEqual(["position_opened", "position_opened"]);
+  });
+
   it("marks a position only from a complete, fresh valuation", async () => {
     const { service } = await serviceFixture();
     await service.open({ id: "pos-valuation", pool: "pool-A", capital: 250, entryPrice: 1.25, at: "2026-10-22T10:00:00.000Z" });
