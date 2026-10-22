@@ -1,16 +1,15 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { resolve } from "node:path";
-import { PaperLedger } from "./paper-ledger.js";
+import { PaperPortfolioService } from "./paper-portfolio-service.js";
 import { PaperLedgerStore } from "./paper-ledger-store.js";
 import { MeteoraPoolCollector } from "./collectors/meteora.js";
-import { toMarketSnapshot } from "./collectors/meteora.js";
 
 const statePath = resolve(process.env.PAPER_STATE_PATH ?? "data/local/paper-portfolio.json");
 const port = Number(process.env.PAPER_DASHBOARD_PORT ?? "8787");
 const host = process.env.PAPER_DASHBOARD_HOST ?? "127.0.0.1";
 const store = new PaperLedgerStore(statePath);
+const portfolio = new PaperPortfolioService(store);
 const collector = new MeteoraPoolCollector();
-const storeMutex = { busy: false };
 
 function json(res: ServerResponse, status: number, payload: unknown): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
@@ -36,18 +35,6 @@ function numberField(input: Record<string, unknown>, key: string): number {
   const value = input[key];
   if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${key} must be a finite number`);
   return value;
-}
-async function withLedger<T>(operation: (ledger: PaperLedger) => Promise<T> | T): Promise<T> {
-  if (storeMutex.busy) throw new Error("portfolio is processing another update; retry shortly");
-  storeMutex.busy = true;
-  try {
-    const ledger = await store.load() ?? new PaperLedger(1_000);
-    const result = await operation(ledger);
-    await store.save(ledger);
-    return result;
-  } finally {
-    storeMutex.busy = false;
-  }
 }
 const page = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -100,13 +87,10 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
     if (req.method === "GET" && url.pathname === "/api/health") { json(res, 200, { status: "ok", mode: "paper-only" }); return; }
     if (req.method === "GET" && url.pathname === "/api/portfolio") {
-      const ledger = await store.load() ?? new PaperLedger(1_000);
-      const summary = ledger.summary();
-      json(res, 200, { mode: "paper-only", statePath, summary: { ...summary, returnPct: (summary.totalPnlUsd / summary.initialCapitalUsd) * 100 }, positions: ledger.getPositions().filter((p) => p.status === "open") }); return;
+      json(res, 200, { ...await portfolio.report(), statePath }); return;
     }
     if (req.method === "GET" && url.pathname === "/api/history") {
-      const ledger = await store.load() ?? new PaperLedger(1_000);
-      json(res, 200, { positions: ledger.getPositions(), events: ledger.getEvents() }); return;
+      json(res, 200, await portfolio.history()); return;
     }
     if (req.method === "GET" && url.pathname === "/api/market") {
       const result = await collector.collectPools(30);
@@ -117,12 +101,11 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       const input = await body(req);
       const action = url.pathname.slice("/api/portfolio/".length);
       const at = new Date().toISOString();
-      const result = await withLedger((ledger) => {
-        if (action === "open") return ledger.openPosition({ id: stringField(input,"id"), poolAddress: stringField(input,"pool"), openedAt: at, initialCapitalUsd: numberField(input,"capital"), entryPoolPrice: numberField(input,"entryPrice") });
-        if (action === "mark") return ledger.markPosition(stringField(input,"id"), at, numberField(input,"value"));
-        if (action === "close") return ledger.closePosition(stringField(input,"id"), at, numberField(input,"value"));
-        throw new Error("unsupported portfolio action");
-      });
+      let result: unknown;
+      if (action === "open") result = await portfolio.open({ id: stringField(input,"id"), pool: stringField(input,"pool"), capital: numberField(input,"capital"), entryPrice: numberField(input,"entryPrice"), at });
+      else if (action === "mark") result = await portfolio.mark({ id: stringField(input,"id"), value: numberField(input,"value"), at });
+      else if (action === "close") result = await portfolio.close({ id: stringField(input,"id"), value: numberField(input,"value"), at });
+      else throw new Error("unsupported portfolio action");
       json(res, 200, { success: true, result }); return;
     }
     json(res, 404, { error: "not found" });
