@@ -37,6 +37,29 @@ describe("PaperPortfolioService integration", () => {
     expect(history.events.map((event) => event.type)).toEqual(["position_opened", "position_marked", "position_closed"]);
   });
 
+  it("marks a position only from a complete, fresh valuation", async () => {
+    const { service } = await serviceFixture();
+    await service.open({ id: "pos-valuation", pool: "pool-A", capital: 250, entryPrice: 1.25, at: "2026-10-22T10:00:00.000Z" });
+    const valuation = {
+      status: "available" as const,
+      capturedAt: "2026-10-22T10:01:00.000Z",
+      ageMs: 1_000,
+      rangeStatus: "in-range" as const,
+      inventoryValueUsd: 270,
+      inventoryPnlUsd: 20,
+      feesUsd: 5,
+      executionCostsUsd: 2,
+      networkCostsUsd: 1,
+      netPnlUsd: 22,
+      evidence: { inventory: "sourced" as const, fees: "sourced" as const, executionCosts: "sourced" as const, networkCosts: "sourced" as const, netPnl: "sourced" as const },
+      unavailableReasons: []
+    };
+    await service.markFromValuation({ id: "pos-valuation", valuation });
+    expect((await service.report()).summary).toMatchObject({ equityUsd: 1_022, unrealizedPnlUsd: 22, totalPnlUsd: 22 });
+    await expect(service.markFromValuation({ id: "pos-valuation", valuation: { ...valuation, ageMs: 61_000 } }))
+      .rejects.toThrow(/exceeds the 60-second safety limit/);
+  });
+
   it("does not save state when a position operation fails validation", async () => {
     const { store, service } = await serviceFixture();
     await expect(service.open({ id: "overspend", pool: "pool-A", capital: 1_500, entryPrice: 1, at: "2026-10-22T10:00:00.000Z" })).rejects.toThrow(/insufficient paper cash/);
