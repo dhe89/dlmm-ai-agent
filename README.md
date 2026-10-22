@@ -131,7 +131,7 @@ Configuration:
 - `PAPER_DASHBOARD_PORT` defaults to `8787`.
 - `PAPER_STATE_PATH` defaults to `data/local/paper-portfolio.json`.
 
-For security, keep the dashboard bound to localhost. It currently has no authentication and should not be exposed directly to the public internet. On a phone, access it after the app is hosted on a secured environment or use a trusted private network with appropriate protections. This is a manual paper portfolio dashboard, not yet an automated strategy runner or validated DLMM LP valuation engine.
+For security, keep the dashboard bound to localhost unless you have a specific protected deployment setup. Non-loopback binding requires both `PAPER_DASHBOARD_USERNAME` and `PAPER_DASHBOARD_PASSWORD`, enabling HTTP Basic Authentication; Basic Authentication does not encrypt traffic, so do not expose the server directly to the public internet. On a phone, use a trusted private network or VPN and HTTPS. This is a manual paper portfolio dashboard, not yet an automated strategy runner or validated DLMM LP valuation engine.
 
 ## Collect read-only paper strategy signals
 
