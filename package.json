@@ -19,7 +19,8 @@
     "validate:walk-forward": "npm run build && node dist/walk-forward-cli.js",
     "compare:strategies": "npm run build && node dist/strategy-comparison-cli.js",
     "paper:portfolio": "npm run build && node dist/paper-portfolio-cli.js",
-    "paper:dashboard": "npm run build && node dist/paper-dashboard.js"
+    "paper:dashboard": "npm run build && node dist/paper-dashboard.js",
+    "paper:strategy": "npm run build && node dist/paper-strategy-runner.js"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
