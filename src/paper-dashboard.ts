@@ -144,10 +144,10 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
 }
 
-export function startPaperDashboard(options: { host?: string; port?: number; statePath?: string } = {}) {
+export function startPaperDashboard(options: { host?: string; port?: number } = {}) {
   const dashboardHost = options.host ?? host;
   const dashboardPort = options.port ?? port;
-  const dashboardStatePath = options.statePath ?? statePath;
+  const dashboardStatePath = statePath;
   if (!Number.isInteger(dashboardPort) || dashboardPort < 1 || dashboardPort > 65535) throw new Error("PAPER_DASHBOARD_PORT must be a valid TCP port");
   const loopbackHosts = new Set(["127.0.0.1", "::1", "localhost"]);
   if (!loopbackHosts.has(dashboardHost) && (!dashboardUsername || !dashboardPassword)) {
