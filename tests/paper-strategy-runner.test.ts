@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarketSnapshot } from "../src/domain.js";
-import { calculatePaperStrategySignal } from "../src/paper-strategy-runner.js";
+import { calculatePaperStrategySignal, validateStrategyHistoryCandidate } from "../src/paper-strategy-runner.js";
 
 function snapshots(prices: number[]): MarketSnapshot[] {
   return prices.map((currentPrice, index) => ({
@@ -53,4 +53,21 @@ describe("calculatePaperStrategySignal", () => {
   it("rejects empty pool identifiers", () => {
     expect(() => calculatePaperStrategySignal([{ ...snapshots([1])[0]!, poolAddress: " " }], 1, 3)).toThrow(/empty pool address/);
   });
+  it("rejects a duplicate candidate timestamp before the caller persists it", () => {
+    const history = snapshots([1, 2]);
+    const duplicateCandidate = { ...snapshots([3])[0]!, capturedAt: history[1]!.capturedAt };
+    expect(() => validateStrategyHistoryCandidate(history, duplicateCandidate, 1, 3))
+      .toThrow(/timestamps must be unique/);
+    expect(history).toHaveLength(2);
+  });
+
+  it("returns the validated candidate history and decision together", () => {
+    const history = snapshots([1, 2]);
+    const candidate = snapshots([3])[0]!;
+    expect(validateStrategyHistoryCandidate(history, candidate, 1, 3)).toEqual({
+      history: [...history, candidate],
+      decision: { signal: "LONG", fastAverage: 3, slowAverage: 2, observations: 3 }
+    });
+  });
+
 });
