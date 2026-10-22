@@ -182,7 +182,14 @@ export function startPaperDashboard(options: { host?: string; port?: number } = 
   if ((dashboardUsername && !dashboardPassword) || (!dashboardUsername && dashboardPassword)) {
     throw new Error("Set both PAPER_DASHBOARD_USERNAME and PAPER_DASHBOARD_PASSWORD, or neither");
   }
-  const server = createServer((req, res) => { void handle(req, res); });
+  const server = createServer((req, res) => {
+    res.setHeader("x-content-type-options", "nosniff");
+    res.setHeader("x-frame-options", "DENY");
+    res.setHeader("referrer-policy", "no-referrer");
+    res.setHeader("permissions-policy", "camera=(), microphone=(), geolocation=()");
+    res.setHeader("content-security-policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    void handle(req, res);
+  });
   server.listen(dashboardPort, dashboardHost, () => {
     console.log(JSON.stringify({ status: "listening", host: dashboardHost, port: dashboardPort, mode: "paper-only", statePath: dashboardStatePath, url: `http://${dashboardHost}:${dashboardPort}` }));
   });
