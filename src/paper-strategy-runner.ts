@@ -69,6 +69,28 @@ export function validateStrategyHistoryCandidate(
   return { history: candidateHistory, decision };
 }
 
+/** Makes a retry idempotent only when the same timestamp has identical snapshot data. */
+export function resolveStrategyHistoryCandidate(
+  history: readonly MarketSnapshot[],
+  snapshot: MarketSnapshot,
+  fastWindow: number,
+  slowWindow: number
+): { history: MarketSnapshot[]; decision: ReturnType<typeof calculatePaperStrategySignal>; alreadyPersisted: boolean } {
+  const existing = history.find((item) => item.capturedAt === snapshot.capturedAt);
+  if (existing) {
+    if (JSON.stringify(existing) !== JSON.stringify(snapshot)) {
+      throw new Error("snapshot timestamp already exists with different data");
+    }
+    return {
+      history: [...history],
+      decision: calculatePaperStrategySignal(history, fastWindow, slowWindow),
+      alreadyPersisted: true
+    };
+  }
+  const candidate = validateStrategyHistoryCandidate(history, snapshot, fastWindow, slowWindow);
+  return { ...candidate, alreadyPersisted: false };
+}
+
 async function main(): Promise<void> {
   const poolAddress = option("pool");
   if (!poolAddress?.trim()) throw new Error("required option: --pool=POOL_ADDRESS");
@@ -105,20 +127,10 @@ async function main(): Promise<void> {
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     }
-    // Treat an exact already-persisted observation as a recoverable retry only
-    // when every field matches. A timestamp collision with different data remains fatal.
-    const existing = history.find((item) => item.capturedAt === snapshot.capturedAt);
-    let candidate: ReturnType<typeof validateStrategyHistoryCandidate>;
-    if (existing) {
-      if (JSON.stringify(existing) !== JSON.stringify(snapshot)) {
-        throw new Error("snapshot timestamp already exists with different data");
-      }
-      candidate = {
-        history: history,
-        decision: calculatePaperStrategySignal(history, fastWindow, slowWindow)
-      };
-    } else {
-      candidate = validateStrategyHistoryCandidate(history, snapshot, fastWindow, slowWindow);
+    // A retry may reuse an identical persisted observation, but never overwrite
+    // a timestamp collision whose data differs.
+    const candidate = resolveStrategyHistoryCandidate(history, snapshot, fastWindow, slowWindow);
+    if (!candidate.alreadyPersisted) {
       await mkdir(dirname(historyPath), { recursive: true });
       await appendFile(historyPath, JSON.stringify(snapshot) + "\n", "utf8");
     }
