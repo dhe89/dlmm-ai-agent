@@ -4,8 +4,10 @@ import { resolve } from "node:path";
 import { PaperPortfolioService } from "./paper-portfolio-service.js";
 import { PaperLedgerStore } from "./paper-ledger-store.js";
 import { MeteoraPoolCollector } from "./collectors/meteora.js";
+import { getPaperStrategyRunnerHealth } from "./paper-runner-health.js";
 
 const statePath = resolve(process.env.PAPER_STATE_PATH ?? "data/local/paper-portfolio.json");
+const runnerStatusPath = resolve(process.env.PAPER_RUNNER_STATUS_PATH ?? "data/local/strategy-runner-status.json");
 const port = Number(process.env.PAPER_DASHBOARD_PORT ?? process.env.PORT ?? "8787");
 const host = process.env.PAPER_DASHBOARD_HOST ?? "127.0.0.1";
 const dashboardUsername = process.env.PAPER_DASHBOARD_USERNAME;
@@ -111,6 +113,12 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     if (req.method === "GET" && url.pathname === "/api/health") {
       const health = await getPaperDashboardHealth(store);
       json(res, health.statusCode, health.payload);
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/runner-health") {
+      const health = await getPaperStrategyRunnerHealth(runnerStatusPath);
+      const statusCode = ["stale", "retrying", "stopped", "unhealthy"].includes(health.status) ? 503 : 200;
+      json(res, statusCode, health);
       return;
     }
     if (req.method === "GET" && url.pathname === "/api/portfolio") {
