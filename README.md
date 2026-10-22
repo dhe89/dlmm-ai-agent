@@ -184,7 +184,7 @@ The simplest first setup is to run the dashboard on your computer and reach it f
 4. On the computer, publish the local dashboard only to your tailnet using Tailscale Serve: `tailscale serve --bg http://127.0.0.1:8787`. Follow the current Tailscale CLI output to get the HTTPS tailnet URL.
 5. Open that HTTPS URL in the phone browser. Keep the computer awake and the dashboard process running while you use it.
 
-The dashboard's JSON state is stored locally at `data/local/paper-portfolio.json` by default; keep regular backups and do not commit local state. To stop private access, use `tailscale serve --https=443 off` if supported by your installed CLI, or inspect `tailscale serve status` and follow its displayed disable command. Tailscale commands can vary by version; use the current official Tailscale documentation if the CLI rejects a command.
+The dashboard's JSON state is stored locally at `data/local/paper-portfolio.json` by default; keep regular backups and do not commit local state. To stop private access, use `tailscale serve off`. Check `tailscale serve status` to confirm it is disabled. See the official [Tailscale Serve documentation](https://tailscale.com/docs/features/tailscale-serve) for current commands and HTTPS setup.
 
 This is a private-network setup, not a production hosting deployment. Do not forward router ports, expose the dashboard directly to the public internet, or use plain HTTP Basic Authentication over an untrusted network. No actual wallet or on-chain signing is involved.
 
