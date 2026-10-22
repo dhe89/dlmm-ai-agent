@@ -75,6 +75,7 @@
 
 ## Milestone 0.7 — Long-running deployment
 - Only after tests pass, deploy a read-only/paper process to a free cloud VM if available.
+- [x] Add CI checks that validate the Render manifest's build command, health endpoint, authentication variables, and persistent state mount.
 - Gate: restart recovery, health checks, alerting, and bounded resource usage.
 
 ## Later milestones
