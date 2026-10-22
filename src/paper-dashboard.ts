@@ -108,7 +108,20 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     if (req.method === "GET" && url.pathname === "/") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); res.end(page); return;
     }
-    if (req.method === "GET" && url.pathname === "/api/health") { json(res, 200, { status: "ok", mode: "paper-only" }); return; }
+    if (req.method === "GET" && url.pathname === "/api/health") {
+      try {
+        await store.load();
+        json(res, 200, { status: "ok", mode: "paper-only", persistence: "ok" });
+      } catch (error) {
+        json(res, 503, {
+          status: "unhealthy",
+          mode: "paper-only",
+          persistence: "error",
+          error: error instanceof Error ? error.message : "paper state could not be loaded"
+        });
+      }
+      return;
+    }
     if (req.method === "GET" && url.pathname === "/api/portfolio") {
       json(res, 200, { ...await portfolio.report(), statePath }); return;
     }
