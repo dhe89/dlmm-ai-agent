@@ -51,6 +51,9 @@
 - [x] Add an opt-in continuous runner mode that logs per-iteration failures and retries after a bounded configured interval without emitting a signal for failed iterations.
 - [x] Make persisted snapshot retries idempotent only when timestamp and all snapshot fields match; reject conflicting timestamp collisions.
 - [x] Prevent duplicate signal journal entries when a retry reprocesses an already-recorded pool/timestamp.
+- [x] Persist machine-readable runner status atomically, including last successful snapshot, last error, and scheduled retry time; preserve recent status across restarts.
+- [x] Make persisted snapshot retries idempotent only when timestamp and all snapshot fields match; reject conflicting timestamp collisions.
+- [x] Prevent duplicate signal journal entries when a retry reprocesses an already-recorded pool/timestamp.
 - [x] Persist machine-readable runner status atomically, including last successful snapshot, last error, and scheduled retry time.
 - [ ] Run strategies on live data without execution in a long-running monitored shadow deployment.
 - [x] Compare the SMA proxy against a passive buy-and-hold pair-price benchmark, including excess return.
