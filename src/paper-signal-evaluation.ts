@@ -15,9 +15,9 @@ export interface SignalEvaluationReport {
   meanForwardReturnPct: number;
   medianForwardReturnPct: number;
   hitRatePct: number;
-  modeledStrategyReturnPct: number;
-  buyHoldReturnPct: number;
-  excessReturnPct: number;
+  meanStrategyForwardReturnPct: number;
+  meanBenchmarkForwardReturnPct: number;
+  meanExcessForwardReturnPct: number;
   costBpsPerSide: number;
   forwardReturnsPct: number[];
 }
@@ -54,6 +54,7 @@ export function evaluatePaperSignals(
   const priceByTime = new Map(ordered.map((snapshot,index)=>[snapshot.capturedAt,{index,price:snapshot.currentPrice}]));
   const returns: number[] = [];
   const strategyReturns: number[] = [];
+  const benchmarkReturns: number[] = [];
   let longSignals = 0;
   let cashSignals = 0;
   const costRate = config.costBpsPerSide / 10_000;
@@ -74,13 +75,10 @@ export function evaluatePaperSignals(
       cashSignals += 1;
       strategyReturns.push(0);
     }
+    benchmarkReturns.push(((1 - costRate) * (1 + forwardReturn) - 1) * 100);
   }
-  const last = ordered.at(-1)!;
-  const first = ordered[0]!;
-  const buyHoldReturnPct = ((1 - costRate) * last.currentPrice / first.currentPrice - 1) * 100;
-  const modeledStrategyReturnPct = strategyReturns.length
-    ? (strategyReturns.reduce((equity, value)=>equity*(1+value/100),1)-1)*100
-    : 0;
+  const meanStrategyForwardReturnPct = strategyReturns.length ? strategyReturns.reduce((sum,value)=>sum+value,0)/strategyReturns.length : 0;
+  const meanBenchmarkForwardReturnPct = benchmarkReturns.length ? benchmarkReturns.reduce((sum,value)=>sum+value,0)/benchmarkReturns.length : 0;
   return {
     methodology: "next-observation-pair-price-signal-proxy",
     warning: "Research diagnostic only. Forward pair-price returns are not DLMM LP PnL; overlapping forward windows are not independent trades and this report is not a holdout profitability claim.",
@@ -91,9 +89,9 @@ export function evaluatePaperSignals(
     meanForwardReturnPct: returns.length ? returns.reduce((sum,value)=>sum+value,0)/returns.length : 0,
     medianForwardReturnPct: median(returns),
     hitRatePct: returns.length ? returns.filter(value=>value>0).length/returns.length*100 : 0,
-    modeledStrategyReturnPct,
-    buyHoldReturnPct,
-    excessReturnPct: modeledStrategyReturnPct-buyHoldReturnPct,
+    meanStrategyForwardReturnPct,
+    meanBenchmarkForwardReturnPct,
+    meanExcessForwardReturnPct: meanStrategyForwardReturnPct-meanBenchmarkForwardReturnPct,
     costBpsPerSide: config.costBpsPerSide,
     forwardReturnsPct: returns
   };
