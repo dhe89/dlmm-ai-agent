@@ -114,7 +114,8 @@ function authorized(req: IncomingMessage): boolean {
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
   try {
-    if (!authorized(req)) {
+    const isHealthProbe = req.method === "GET" && url.pathname === "/api/health";
+    if (!isHealthProbe && !authorized(req)) {
       res.writeHead(401, { "www-authenticate": 'Basic realm="DLMM Paper Dashboard", charset="UTF-8"', "cache-control": "no-store" });
       res.end("Authentication required");
       return;
@@ -124,7 +125,12 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
     if (req.method === "GET" && url.pathname === "/api/health") {
       const health = await getPaperDashboardHealth(store);
-      json(res, health.statusCode, health.payload);
+      // Hosting providers need an unauthenticated probe; expose only coarse status, never local paths/errors.
+      json(res, health.statusCode, {
+        status: health.payload.status,
+        mode: health.payload.mode,
+        persistence: health.payload.persistence
+      });
       return;
     }
     if (req.method === "GET" && url.pathname === "/api/runner-health") {
