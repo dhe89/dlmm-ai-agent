@@ -81,7 +81,9 @@ async function main(): Promise<void> {
   const signalPath = resolve(option("signals") ?? "data/local/strategy-signals.jsonl");
   const collector = new MeteoraPoolCollector();
 
-  for (let i = 0; i < iterations; i += 1) {
+  const forever = process.argv.slice(2).includes("--forever");
+  for (let i = 0; forever || i < iterations; i += 1) {
+    try {
     const result = await collector.collectPools(1000);
     const pool = result.pools.find((candidate) => candidate.address === poolAddress);
     if (!pool || pool.currentPrice === undefined || !Number.isFinite(pool.currentPrice) || pool.currentPrice <= 0) {
@@ -139,7 +141,18 @@ async function main(): Promise<void> {
     await mkdir(dirname(signalPath), { recursive: true });
     await appendFile(signalPath, JSON.stringify(report) + "\n", "utf8");
     console.log(JSON.stringify(report));
-    if (i + 1 < iterations) await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
+    if (forever || i + 1 < iterations) await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
+    } catch (error) {
+      console.error(JSON.stringify({
+        event: "paper_strategy_iteration_failed",
+        iteration: i + 1,
+        retrying: forever,
+        error: error instanceof Error ? error.message : "Unknown strategy runner error",
+        at: new Date().toISOString()
+      }));
+      if (!forever) throw error;
+      await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
+    }
   }
 }
 if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
