@@ -20,6 +20,11 @@ function json(res: ServerResponse, status: number, payload: unknown): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(JSON.stringify(payload, null, 2));
 }
+export function getDashboardErrorStatus(error: unknown, method: string, pathname: string): 400 | 503 {
+  if (error instanceof PaperPortfolioPersistenceError || (method === "GET" && pathname === "/api/market")) return 503;
+  return 400;
+}
+
 export function assertJsonContentType(contentType: string | undefined): void {
   const mediaType = contentType?.split(";")[0]?.trim().toLowerCase();
   if (mediaType !== "application/json") {
@@ -159,11 +164,9 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
     json(res, 404, { error: "not found" });
   } catch (error) {
-    const statusCode = error instanceof PaperPortfolioPersistenceError
-      || (req.method === "GET" && url.pathname === "/api/market")
-      ? 503
-      : 400;
-    json(res, statusCode, { error: error instanceof Error ? error.message : "request failed" });
+    json(res, getDashboardErrorStatus(error, req.method ?? "GET", url.pathname), {
+      error: error instanceof Error ? error.message : "request failed"
+    });
   }
 }
 
