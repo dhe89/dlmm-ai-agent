@@ -25,6 +25,10 @@ export function getDashboardErrorStatus(error: unknown, method: string, pathname
   return 400;
 }
 
+export function requiresDashboardAuthentication(method: string, pathname: string): boolean {
+  return !(method === "GET" && pathname === "/api/health");
+}
+
 export function assertJsonContentType(contentType: string | undefined): void {
   const mediaType = contentType?.split(";")[0]?.trim().toLowerCase();
   if (mediaType !== "application/json") {
@@ -114,8 +118,7 @@ function authorized(req: IncomingMessage): boolean {
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
   try {
-    const isHealthProbe = req.method === "GET" && url.pathname === "/api/health";
-    if (!isHealthProbe && !authorized(req)) {
+    if (requiresDashboardAuthentication(req.method ?? "GET", url.pathname) && !authorized(req)) {
       res.writeHead(401, { "www-authenticate": 'Basic realm="DLMM Paper Dashboard", charset="UTF-8"', "cache-control": "no-store" });
       res.end("Authentication required");
       return;
