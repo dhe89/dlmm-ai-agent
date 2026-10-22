@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { assertJsonContentType, getDashboardErrorStatus, requiresDashboardAuthentication } from "../src/paper-dashboard.js";
+import { applyDashboardSecurityHeaders, assertJsonContentType, getDashboardErrorStatus, requiresDashboardAuthentication } from "../src/paper-dashboard.js";
 import { PaperPortfolioPersistenceError } from "../src/paper-portfolio-service.js";
+
+describe("paper dashboard security headers", () => {
+  it("sets restrictive browser security policies", () => {
+    const headers = new Map<string, string>();
+    applyDashboardSecurityHeaders({
+      setHeader: (name: string, value: string | number | readonly string[]) => {
+        headers.set(name.toLowerCase(), String(value));
+        return {} as never;
+      }
+    });
+    expect(headers.get("x-content-type-options")).toBe("nosniff");
+    expect(headers.get("x-frame-options")).toBe("DENY");
+    expect(headers.get("referrer-policy")).toBe("no-referrer");
+    expect(headers.get("permissions-policy")).toContain("camera=()");
+    expect(headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+    expect(headers.get("content-security-policy")).toContain("connect-src 'self'");
+  });
+});
 
 describe("paper dashboard request content type", () => {
   it("accepts JSON with optional charset parameters", () => {
