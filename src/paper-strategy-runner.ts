@@ -136,12 +136,15 @@ async function main(): Promise<void> {
     }
     const resultSignal = candidate.decision;
     let previousSignal: PaperSignal | null = null;
+    let signalAlreadyRecorded = false;
     try {
       const priorLines = (await readFile(signalPath, "utf8")).split("\n").filter(Boolean);
       for (let lineIndex = priorLines.length - 1; lineIndex >= 0; lineIndex -= 1) {
         try {
-          const prior = JSON.parse(priorLines[lineIndex]!) as { poolAddress?: unknown; signal?: unknown };
-          if (prior.poolAddress === poolAddress && (prior.signal === "LONG" || prior.signal === "CASH" || prior.signal === "WARMING_UP")) {
+          const prior = JSON.parse(priorLines[lineIndex]!) as { poolAddress?: unknown; capturedAt?: unknown; signal?: unknown };
+          if (prior.poolAddress !== poolAddress) continue;
+          if (prior.capturedAt === snapshot.capturedAt) signalAlreadyRecorded = true;
+          if (prior.signal === "LONG" || prior.signal === "CASH" || prior.signal === "WARMING_UP") {
             previousSignal = prior.signal;
             break;
           }
@@ -164,9 +167,11 @@ async function main(): Promise<void> {
       transition: transition.transition,
       warning: "Pair-price SMA crossover proxy only; LONG/CASH is a research signal, not an LP valuation or instruction to execute a transaction."
     };
-    await mkdir(dirname(signalPath), { recursive: true });
-    await appendFile(signalPath, JSON.stringify(report) + "\n", "utf8");
-    console.log(JSON.stringify(report));
+    if (!signalAlreadyRecorded) {
+      await mkdir(dirname(signalPath), { recursive: true });
+      await appendFile(signalPath, JSON.stringify(report) + "\n", "utf8");
+    }
+    console.log(JSON.stringify({ ...report, signalAlreadyRecorded }));
     if (forever || i + 1 < iterations) await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
     } catch (error) {
       console.error(JSON.stringify({
