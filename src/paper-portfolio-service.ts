@@ -8,8 +8,13 @@ export interface PaperPortfolioReport {
   summary: ReturnType<PaperLedger["summary"]> & { returnPct: number };
   positions: ReturnType<PaperLedger["getPositions"]>;
 }
+
+// Serialize mutations by canonical state path across service instances in this process.
+// This prevents two handlers/services from loading the same old snapshot and overwriting
+// each other's changes. It is intentionally not a cross-process/distributed lock.
+const mutationQueues = new Map<string, Promise<void>>();
+
 export class PaperPortfolioService {
-  private busy = false;
   constructor(private readonly store: PaperLedgerStore, private readonly initialCapitalUsd = 1_000) {
     if (!Number.isFinite(initialCapitalUsd) || initialCapitalUsd <= 0) throw new Error("initialCapitalUsd must be greater than zero");
   }
@@ -45,15 +50,22 @@ export class PaperPortfolioService {
     return this.mutate((ledger) => markLedgerFromValuation(ledger, input.id, input.valuation));
   }
   private async mutate<T>(operation: (ledger: PaperLedger) => T): Promise<T> {
-    if (this.busy) throw new Error("portfolio is processing another update; retry shortly");
-    this.busy = true;
+    const key = this.store.filePath;
+    const previous = mutationQueues.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const queued = previous.then(() => gate);
+    mutationQueues.set(key, queued);
+
+    await previous;
     try {
       const ledger = await this.store.load() ?? new PaperLedger(this.initialCapitalUsd);
       const result = operation(ledger);
       await this.store.save(ledger);
       return result;
     } finally {
-      this.busy = false;
+      release();
+      if (mutationQueues.get(key) === queued) mutationQueues.delete(key);
     }
   }
 }
