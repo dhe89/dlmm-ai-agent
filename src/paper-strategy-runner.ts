@@ -4,7 +4,6 @@ import { MeteoraPoolCollector } from "./collectors/meteora.js";
 import type { MarketSnapshot } from "./domain.js";
 import { parseHistoricalSnapshots } from "./historical-backtest.js";
 import { buildPaperSignalJournalEntry, type PaperSignal } from "./strategy-signal-journal.js";
-import { calculatePaperStrategySignal } from "./paper-strategy-runner.js";
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
