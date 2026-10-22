@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { PaperLedgerStore } from "../src/paper-ledger-store.js";
-import { PaperPortfolioService } from "../src/paper-portfolio-service.js";
+import { PaperPortfolioPersistenceError, PaperPortfolioService } from "../src/paper-portfolio-service.js";
 
 let directories: string[] = [];
 async function serviceFixture() {
@@ -79,6 +79,14 @@ describe("PaperPortfolioService integration", () => {
     expect((await service.report()).summary).toMatchObject({ equityUsd: 1_022, unrealizedPnlUsd: 22, totalPnlUsd: 22 });
     await expect(service.markFromValuation({ id: "pos-valuation", valuation: { ...valuation, ageMs: 61_000 } }))
       .rejects.toThrow(/exceeds the 60-second safety limit/);
+  });
+
+  it("classifies unreadable persisted state as a persistence failure", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "paper-portfolio-unreadable-"));
+    directories.push(directory);
+    const service = new PaperPortfolioService(new PaperLedgerStore(directory), 1_000);
+    await expect(service.report()).rejects.toBeInstanceOf(PaperPortfolioPersistenceError);
+    await expect(service.history()).rejects.toBeInstanceOf(PaperPortfolioPersistenceError);
   });
 
   it("does not save state when a position operation fails validation", async () => {
