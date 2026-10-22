@@ -174,6 +174,20 @@ PAPER_DASHBOARD_PASSWORD=use-a-long-unique-secret
 
 Basic Authentication does not encrypt traffic. Do not expose this server directly to the public internet. For phone access, prefer a trusted private network or VPN and put the dashboard behind HTTPS; never commit credentials to Git or share them in logs. The dashboard remains paper-only.
 
+### Access the dashboard from your phone (private network)
+
+The simplest first setup is to run the dashboard on your computer and reach it from your phone through a private VPN such as Tailscale. This does not require hosting the app publicly, a database service, or real-time automation.
+
+1. On the computer, install Node.js 20+ and clone the repository. Run `npm install`.
+2. Start the dashboard with `PAPER_DASHBOARD_HOST=127.0.0.1 PAPER_DASHBOARD_PORT=8787 npm run paper:dashboard` (PowerShell: `$env:PAPER_DASHBOARD_HOST="127.0.0.1"; $env:PAPER_DASHBOARD_PORT="8787"; npm run paper:dashboard`).
+3. Install Tailscale on both the computer and phone, sign in to the same private tailnet, and verify both devices appear online.
+4. On the computer, publish the local dashboard only to your tailnet using Tailscale Serve: `tailscale serve --bg http://127.0.0.1:8787`. Follow the current Tailscale CLI output to get the HTTPS tailnet URL.
+5. Open that HTTPS URL in the phone browser. Keep the computer awake and the dashboard process running while you use it.
+
+The dashboard's JSON state is stored locally at `data/local/paper-portfolio.json` by default; keep regular backups and do not commit local state. To stop private access, use `tailscale serve --https=443 off` if supported by your installed CLI, or inspect `tailscale serve status` and follow its displayed disable command. Tailscale commands can vary by version; use the current official Tailscale documentation if the CLI rejects a command.
+
+This is a private-network setup, not a production hosting deployment. Do not forward router ports, expose the dashboard directly to the public internet, or use plain HTTP Basic Authentication over an untrusted network. No actual wallet or on-chain signing is involved.
+
 ## Development
 
 - Node.js 22 in GitHub Actions
