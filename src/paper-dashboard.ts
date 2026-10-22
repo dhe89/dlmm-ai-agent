@@ -20,7 +20,14 @@ function json(res: ServerResponse, status: number, payload: unknown): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(JSON.stringify(payload, null, 2));
 }
+export function assertJsonContentType(contentType: string | undefined): void {
+  const mediaType = contentType?.split(";")[0]?.trim().toLowerCase();
+  if (mediaType !== "application/json") {
+    throw new Error("content-type must be application/json");
+  }
+}
 async function body(req: IncomingMessage): Promise<Record<string, unknown>> {
+  assertJsonContentType(req.headers["content-type"]);
   let raw = "";
   for await (const chunk of req) {
     raw += chunk.toString();
