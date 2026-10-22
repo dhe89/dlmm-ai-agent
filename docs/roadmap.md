@@ -52,7 +52,7 @@
 - [x] Add a bounded, deterministic SMA parameter sweep ranked by excess return and drawdown.
 - [x] Add chronological train/holdout validation that selects parameters on earlier data and evaluates them on a later segment without parameter-selection leakage.
 - [x] Add expanding-window walk-forward validation with per-fold parameter selection and unseen test segments.
-- [x] Record reproducible input fingerprints and snapshot interval quality statistics in walk-forward reports.
+- [x] Record reproducible input fingerprints and snapshot interval quality statistics in walk-forward, fixed-parameter comparison, and chronological holdout reports.
 - [x] Report positive-return fold frequency, selected-parameter diversity, and parameter stability.
 - [x] Add a fixed-parameter SMA-versus-EMA comparison with matched costs, passive benchmark, and reproducible input fingerprint.
 - [x] Compare SMA and EMA on chronological holdout and expanding-window walk-forward folds.
