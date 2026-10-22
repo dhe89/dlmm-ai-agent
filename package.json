@@ -17,7 +17,8 @@
     "backtest:historical": "npm run build && node dist/historical-backtest.js",
     "validate:holdout": "npm run build && node dist/holdout-validation-cli.js",
     "validate:walk-forward": "npm run build && node dist/walk-forward-cli.js",
-    "compare:strategies": "npm run build && node dist/strategy-comparison-cli.js"
+    "compare:strategies": "npm run build && node dist/strategy-comparison-cli.js",
+    "paper:portfolio": "npm run build && node dist/paper-portfolio-cli.js"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
