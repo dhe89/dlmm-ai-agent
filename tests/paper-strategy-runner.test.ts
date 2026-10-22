@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarketSnapshot } from "../src/domain.js";
-import { calculatePaperStrategySignal, validateStrategyHistoryCandidate } from "../src/paper-strategy-runner.js";
+import { calculatePaperStrategySignal, resolveStrategyHistoryCandidate, validateStrategyHistoryCandidate } from "../src/paper-strategy-runner.js";
 
 function snapshots(prices: number[]): MarketSnapshot[] {
   return prices.map((currentPrice, index) => ({
@@ -68,6 +68,30 @@ describe("calculatePaperStrategySignal", () => {
       history: [...history, candidate],
       decision: { signal: "LONG", fastAverage: 3, slowAverage: 2, observations: 3 }
     });
+  });
+
+  it("reuses an identical persisted snapshot on retry without duplicating history", () => {
+    const history = snapshots([1, 2, 3]);
+    const retry = { ...history[2]! };
+    expect(resolveStrategyHistoryCandidate(history, retry, 1, 3)).toEqual({
+      history,
+      decision: { signal: "LONG", fastAverage: 3, slowAverage: 2, observations: 3 },
+      alreadyPersisted: true
+    });
+    expect(history).toHaveLength(3);
+  });
+
+  it("rejects a timestamp collision when the snapshot data differs", () => {
+    const history = snapshots([1, 2, 3]);
+    const collision = { ...history[2]!, currentPrice: 99 };
+    expect(() => resolveStrategyHistoryCandidate(history, collision, 1, 3))
+      .toThrow(/timestamp already exists with different data/);
+  });
+
+  it("marks a new valid observation for persistence", () => {
+    const history = snapshots([1, 2]);
+    const next = { ...snapshots([3])[0]!, capturedAt: "2026-01-01T00:02:00.000Z" };
+    expect(resolveStrategyHistoryCandidate(history, next, 1, 3).alreadyPersisted).toBe(false);
   });
 
 });
