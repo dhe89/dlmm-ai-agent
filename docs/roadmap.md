@@ -22,6 +22,7 @@
 
 ## Milestone 0.4 — Paper ledger
 - [x] Add deterministic ledger transitions for opening, marking, and closing virtual positions.
+- [x] Expose persistent paper portfolio status/history through a CLI and mobile-friendly local dashboard.
 - [x] Track cash, open position value, equity, realized PnL, and unrealized PnL separately.
 - [x] Test accounting invariants, overspending, duplicate IDs, timestamp order, and closed positions.
 - [x] Add atomic JSON snapshot persistence and state restoration.
@@ -46,7 +47,8 @@
 - [x] Expose an opt-in read-only CLI screen over freshly collected live pool snapshots.
 - [x] Add a deterministic, cost-aware pair-price SMA shadow backtest with no same-bar look-ahead.
 - [ ] Validate strategies against a sufficiently long historical data set.
-- [ ] Run strategies on live data without execution.
+- [x] Add a foreground read-only strategy signal runner that records repeated pair-price snapshots and SMA research signals without execution.
+- [ ] Run strategies on live data without execution in a long-running monitored shadow deployment.
 - [x] Compare the SMA proxy against a passive buy-and-hold pair-price benchmark, including excess return.
 - [x] Add a fail-closed JSONL historical snapshot loader and reproducible CLI report.
 - [x] Add a bounded, deterministic SMA parameter sweep ranked by excess return and drawdown.
