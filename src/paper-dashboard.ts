@@ -16,6 +16,14 @@ const store = new PaperLedgerStore(statePath);
 const portfolio = new PaperPortfolioService(store);
 const collector = new MeteoraPoolCollector();
 
+export function applyDashboardSecurityHeaders(res: Pick<ServerResponse, "setHeader">): void {
+  res.setHeader("x-content-type-options", "nosniff");
+  res.setHeader("x-frame-options", "DENY");
+  res.setHeader("referrer-policy", "no-referrer");
+  res.setHeader("permissions-policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("content-security-policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+}
+
 function json(res: ServerResponse, status: number, payload: unknown): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(JSON.stringify(payload, null, 2));
@@ -192,11 +200,7 @@ export function startPaperDashboard(options: { host?: string; port?: number } = 
     throw new Error("Set both PAPER_DASHBOARD_USERNAME and PAPER_DASHBOARD_PASSWORD, or neither");
   }
   const server = createServer((req, res) => {
-    res.setHeader("x-content-type-options", "nosniff");
-    res.setHeader("x-frame-options", "DENY");
-    res.setHeader("referrer-policy", "no-referrer");
-    res.setHeader("permissions-policy", "camera=(), microphone=(), geolocation=()");
-    res.setHeader("content-security-policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    applyDashboardSecurityHeaders(res);
     void handle(req, res);
   });
   server.listen(dashboardPort, dashboardHost, () => {
