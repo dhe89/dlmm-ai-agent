@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: dlmm-ai-agent-dashboard
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/paper-dashboard.js
+    healthCheckPath: /api/health
+    disk:
+      name: paper-dashboard-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PAPER_DASHBOARD_HOST
+        value: 0.0.0.0
+      - key: PAPER_STATE_PATH
+        value: /var/data/paper-portfolio.json
+      - key: PAPER_DASHBOARD_USERNAME
+        sync: false
+      - key: PAPER_DASHBOARD_PASSWORD
+        sync: false
